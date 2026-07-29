@@ -1,0 +1,18 @@
+# Scripts
+*.ps1
+*.txt
+
+# IDE
+.trae/
+Trae CN/
+
+# Backup/artifact files
+ (2).html
+.html
+index (2).html
+
+# Documents
+*.docx
+
+# Deploy dir
+gh-pages-deploy/
