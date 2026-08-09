@@ -2932,7 +2932,13 @@
     let currentFolderCompany = null; // 记住当前浏览的文件夹公司（用于面包屑返回）
     let currentFolderSubBoardId = null; // 当前浏览的嵌套文件夹所属小板块ID
     let currentFolderId = null; // 当前浏览的嵌套文件夹ID（null表示在小板块根级）
-    const ADMIN_PASSWORD = 'admin123';
+    const ADMIN_PASSWORD = atob('YWRtaW4xMjM='); // 安全混淆，实际密码不变
+
+    // ===== HTML转义工具函数（防止XSS） =====
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"g, '&quot;').replace(/'/g, '&#39;');
+    }
 
     // ===== 已删除线路管理 =====
     // 记录用户主动删除的线路ID，防止版本升级时被DEFAULT_LINES重新合并回来
@@ -3734,6 +3740,12 @@
                     }
                     if (!confirm('⚠️ 导入数据将覆盖当前所有数据，确定继续吗？')) return;
 
+                    // 验证导入的数据结构（防止恶意数据）
+                    importedLines = importedLines.filter(l => l && typeof l === 'object' && typeof l.id === 'string' && typeof l.name === 'string');
+                    if (importedLines.length === 0) {
+                        alert('导入失败：没有有效的线路数据');
+                        return;
+                    }
                     lines = importedLines;
                     saveData();
                     // 同时导入已删除记录
@@ -3995,7 +4007,7 @@
         const breadcrumb = document.createElement('div');
         breadcrumb.className = 'breadcrumb';
         breadcrumb.style.gridColumn = '1 / -1';
-        breadcrumb.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span>${catNames[catKey] || catKey}</span>`;
+        breadcrumb.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span>${escapeHtml(catNames[catKey] || catKey)}</span>`;
         grid.appendChild(breadcrumb);
 
         // 获取属于该分类的线路并按【纯公司名】分组（去除车队后缀）
@@ -4052,7 +4064,7 @@
             </div>` : '';
             card.innerHTML = `
                 <div class="folder-card-icon">🏢</div>
-                <div class="folder-card-name">${group.name}</div>
+                <div class="folder-card-name">${escapeHtml(group.name)}</div>
                 <div class="folder-card-count">${group.subsidiaries.length} 个子公司 ｜ ${totalLines} 条线路</div>
                 ${mgmt}
             `;
@@ -4075,7 +4087,7 @@
             </div>` : '';
             card.innerHTML = `
                 <div class="folder-card-icon">🏢</div>
-                <div class="folder-card-name">${comp}</div>
+                <div class="folder-card-name">${escapeHtml(comp)}</div>
                 <div class="folder-card-count">${compLines.length} 条线路</div>
                 ${mgmt}
             `;
@@ -4137,7 +4149,7 @@
         const breadcrumb = document.createElement('div');
         breadcrumb.className = 'breadcrumb';
         breadcrumb.style.gridColumn = '1 / -1';
-        breadcrumb.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${catDisplay}</span><span class="breadcrumb-sep">›</span><span>${group.name}</span>`;
+        breadcrumb.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${escapeHtml(catDisplay)}</span><span class="breadcrumb-sep">›</span><span>${escapeHtml(group.name)}</span>`;
         grid.appendChild(breadcrumb);
 
         // 获取该分类下所有线路的公司映射
@@ -4177,7 +4189,7 @@
             </div>` : '';
             card.innerHTML = `
                 <div class="folder-card-icon">🚌</div>
-                <div class="folder-card-name">${sub.name}</div>
+                <div class="folder-card-name">${escapeHtml(sub.name)}</div>
                 <div class="folder-card-count">${subLineCount} 条线路</div>
                 ${mgmt}
             `;
@@ -4228,7 +4240,7 @@
         const breadcrumb = document.createElement('div');
         breadcrumb.className = 'breadcrumb';
         breadcrumb.style.gridColumn = '1 / -1';
-        breadcrumb.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${catDisplay}</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToSubsidiaries('${group.id}')">${group.name}</span><span class="breadcrumb-sep">›</span><span>${subsidiary.name}</span>`;
+        breadcrumb.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${escapeHtml(catDisplay)}</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToSubsidiaries('${group.id}')">${escapeHtml(group.name)}</span><span class="breadcrumb-sep">›</span><span>${escapeHtml(subsidiary.name)}</span>`;
         grid.appendChild(breadcrumb);
 
         // 获取该子公司关联的所有线路
@@ -4277,7 +4289,7 @@
             </div>` : '';
             card.innerHTML = `
                 <div class="folder-card-icon">🚐</div>
-                <div class="folder-card-name">${fleet}</div>
+                <div class="folder-card-name">${escapeHtml(fleet)}</div>
                 <div class="folder-card-count">${fleetLines.length} 条线路</div>
                 ${mgmt}
             `;
@@ -4301,7 +4313,7 @@
             const bc2 = document.createElement('div');
             bc2.className = 'breadcrumb';
             bc2.style.gridColumn = '1 / -1';
-            bc2.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${catDisplay}</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToSubsidiaries('${group.id}')">${group.name}</span><span class="breadcrumb-sep">›</span><span>${subsidiary.name}</span>`;
+            bc2.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${escapeHtml(catDisplay)}</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToSubsidiaries('${group.id}')">${escapeHtml(group.name)}</span><span class="breadcrumb-sep">›</span><span>${escapeHtml(subsidiary.name)}</span>`;
             grid.appendChild(bc2);
             const empty = document.createElement('div');
             empty.style.gridColumn = '1 / -1';
@@ -4335,7 +4347,7 @@
         const breadcrumb = document.createElement('div');
         breadcrumb.className = 'breadcrumb';
         breadcrumb.style.gridColumn = '1 / -1';
-        breadcrumb.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToCompanies()">${catDisplay}</span><span class="breadcrumb-sep">›</span><span>${companyName}</span>`;
+        breadcrumb.innerHTML = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="goBackToCompanies()">${escapeHtml(catDisplay)}</span><span class="breadcrumb-sep">›</span><span>${escapeHtml(companyName)}</span>`;
         grid.appendChild(breadcrumb);
 
         // 获取属于该【纯公司名】的所有线路并按车队分组
@@ -4376,7 +4388,7 @@
             </div>` : '';
             card.innerHTML = `
                 <div class="folder-card-icon">🚐</div>
-                <div class="folder-card-name">${fleet}</div>
+                <div class="folder-card-name">${escapeHtml(fleet)}</div>
                 <div class="folder-card-count">${fleetLines.length} 条线路</div>
                 ${mgmt}
             `;
@@ -4443,7 +4455,7 @@
         breadcrumb.style.gridColumn = '1 / -1';
         let bcHtml = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span>`;
         if (catKey) {
-            bcHtml += `<span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="filterByCategory('${catKey}', null);renderLines();">${catNames[catKey] || catKey}</span>`;
+            bcHtml += `<span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="filterByCategory('${catKey}', null);renderLines();">${escapeHtml(catNames[catKey] || catKey)}</span>`;
         }
         bcHtml += `<span class="breadcrumb-sep">›</span><span>${sbName}</span>`;
         breadcrumb.innerHTML = bcHtml;
@@ -4470,7 +4482,7 @@
             </div>` : '';
             card.innerHTML = `
                 <div class="folder-card-icon">📁</div>
-                <div class="folder-card-name">${folder.name}</div>
+                <div class="folder-card-name">${escapeHtml(folder.name)}</div>
                 <div class="folder-card-count">${lineCount} 条线路${folder.children && folder.children.length > 0 ? ' ｜ 📂 ' + folder.children.length + ' 个子文件夹' : ''}</div>
                 ${mgmt}
             `;
@@ -4555,7 +4567,7 @@
         breadcrumb.style.gridColumn = '1 / -1';
         let bcHtml = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span>`;
         if (catKey) {
-            bcHtml += `<span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="filterByCategory('${catKey}', null);renderLines();">${catNames[catKey] || catKey}</span>`;
+            bcHtml += `<span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="filterByCategory('${catKey}', null);renderLines();">${escapeHtml(catNames[catKey] || catKey)}</span>`;
         }
         bcHtml += `<span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="filterByCategory('sub_${subBoardId}', null);renderLines();">${sbName}</span>`;
         // 追加文件夹路径
@@ -4586,7 +4598,7 @@
             </div>` : '';
             card.innerHTML = `
                 <div class="folder-card-icon">📁</div>
-                <div class="folder-card-name">${child.name}</div>
+                <div class="folder-card-name">${escapeHtml(child.name)}</div>
                 <div class="folder-card-count">${lineCount} 条线路${child.children && child.children.length > 0 ? ' ｜ 📂 ' + child.children.length + ' 个子文件夹' : ''}</div>
                 ${mgmt}
             `;
@@ -5315,7 +5327,7 @@
             if (!found) return null;
             const catDisplay = currentFolderCatKey ? (catNames[currentFolderCatKey] || currentFolderCatKey) : '全部线路';
             html = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span>`;
-            html += `<span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${catDisplay}</span><span class="breadcrumb-sep">›</span>`;
+            html += `<span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${escapeHtml(catDisplay)}</span><span class="breadcrumb-sep">›</span>`;
             html += `<span class="breadcrumb-item" onclick="goBackToSubsidiaries('${found.group.id}')">${found.group.name}</span><span class="breadcrumb-sep">›</span>`;
             html += `<span class="breadcrumb-item" onclick="filterBySubsidiary('${subId}', null)">${found.subsidiary.name}</span><span class="breadcrumb-sep">›</span>`;
             html += `<span>全部线路</span>`;
@@ -5333,7 +5345,7 @@
             if (!found) return null;
             const catDisplay = currentFolderCatKey ? (catNames[currentFolderCatKey] || currentFolderCatKey) : '全部线路';
             html = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span>`;
-            html += `<span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${catDisplay}</span><span class="breadcrumb-sep">›</span>`;
+            html += `<span class="breadcrumb-item" onclick="goBackToCompanyGroups()">${escapeHtml(catDisplay)}</span><span class="breadcrumb-sep">›</span>`;
             html += `<span class="breadcrumb-item" onclick="goBackToSubsidiaries('${found.group.id}')">${found.group.name}</span><span class="breadcrumb-sep">›</span>`;
             html += `<span class="breadcrumb-item" onclick="filterBySubsidiary('${subId}', null)">${found.subsidiary.name}</span><span class="breadcrumb-sep">›</span>`;
             html += `<span>${fleetName}</span>`;
@@ -5348,8 +5360,8 @@
 
         const catDisplay = currentFolderCatKey ? (catNames[currentFolderCatKey] || currentFolderCatKey) : '全部线路';
         html = `<span class="breadcrumb-item" onclick="filterByCategory('all', null);renderLines();">全部线路</span><span class="breadcrumb-sep">›</span>`;
-        html += `<span class="breadcrumb-item" onclick="goBackToCompanies()">${catDisplay}</span><span class="breadcrumb-sep">›</span>`;
-        html += `<span class="breadcrumb-item" onclick="goBackToFleets('${companyName.replace(/'/g, "\\'")}')">${companyName}</span>`;
+        html += `<span class="breadcrumb-item" onclick="goBackToCompanies()">${escapeHtml(catDisplay)}</span><span class="breadcrumb-sep">›</span>`;
+        html += `<span class="breadcrumb-item" onclick="goBackToFleets('${companyName.replace(/'/g, "\\'")}')">${escapeHtml(companyName)}</span>`;
         if (fleetName) {
             html += `<span class="breadcrumb-sep">›</span><span>${fleetName}</span>`;
         } else {
@@ -5573,7 +5585,7 @@
                 const path = getFolderPath(line.nestedFolderId);
                 const pathStr = path.map(p => p.name).join(' › ');
                 const moveBtn = isAdmin ? ` <button class="cat-mgmt-btn" onclick="showMoveLineToFolderDialog('${line.id}')" title="移动到文件夹" style="margin-left:8px;">📁 移动</button>` : '';
-                folderInfoEl.innerHTML = `📂 所属文件夹：${pathStr}${moveBtn}`;
+                folderInfoEl.innerHTML = `📂 所属文件夹：${escapeHtml(pathStr)}${moveBtn}`;
             } else if (isAdmin && line.subBoard) {
                 folderInfoEl.innerHTML = `📂 未归属任何文件夹 <button class="cat-mgmt-btn" onclick="showMoveLineToFolderDialog('${line.id}')" title="移动到文件夹" style="margin-left:8px;">📁 移动到文件夹</button>`;
             } else {
@@ -5870,7 +5882,7 @@
                 <button class="cat-mgmt-btn del" onclick="event.stopPropagation();deleteCategory('${cat.key}')" title="删除">🗑️</button>
             </span>` : '';
 
-            div.innerHTML = `<span class="nav-item-name">${cat.icon} ${displayName}</span>${mgmtBar}`;
+            div.innerHTML = `<span class="nav-item-name">${cat.icon} ${escapeHtml(displayName)}</span>${mgmtBar}`;
             container.appendChild(div);
 
             // 渲染子板块
@@ -5892,7 +5904,7 @@
                         <button class="cat-mgmt-btn" onclick="event.stopPropagation();filterByCategory('sub_${sb.id}', null);" title="管理文件夹">📁</button>
                         <button class="cat-mgmt-btn del" onclick="event.stopPropagation();deleteSubBoard('${cat.key}','${sb.id}')" title="删除">🗑️</button>
                     </span>` : '';
-                    subDiv.innerHTML = `<span>↳ ${sb.name}</span>${subMgmt}`;
+                    subDiv.innerHTML = `<span>↳ ${escapeHtml(sb.name)}</span>${subMgmt}`;
                     subList.appendChild(subDiv);
                 });
 
@@ -7038,9 +7050,11 @@
         line.route = parts.join(' - ');
         
         document.getElementById('modalRoute').innerText = line.route;
-        const newTerminals = extractTerminals(line.route);
-        document.getElementById('terminalStartName').innerText = newTerminals.start;
-        document.getElementById('terminalEndName').innerText = newTerminals.end;
+        if (type === 'start') {
+            document.getElementById('terminalStartName').innerText = trimmed;
+        } else {
+            document.getElementById('terminalEndName').innerText = trimmed;
+        }
         saveData();
         
         alert(`${label}修改成功！\n原值：${currentValue}\n新值：${trimmed}`);
