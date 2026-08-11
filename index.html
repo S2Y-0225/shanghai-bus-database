@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>上海公交资料库 | 魔都公交记忆</title>
     <style>
@@ -7162,61 +7163,104 @@
         }
     }
 
-    // 添加历史记录（仅管理员）
+    // 添加历史记录（仅管理员，弹出带OCR的编辑窗口）
     function addHistoryEntry() {
         if (!isAdmin) {
             alert('仅管理员/房主可操作，请先登录！');
             return;
         }
-        const line = lines.find(l => l.id === currentLineId);
-        if (!line) return;
-        if (!line.historyEntries) line.historyEntries = [];
-        const time = prompt('请输入时间（如：2020年5月1日）：', '');
-        if (time === null) return;
-        if (!time.trim()) {
-            alert('时间不能为空！');
-            return;
-        }
-        const content = prompt('请输入内容：', '如：线路调整为XX路');
-        if (content === null) return;
-        if (!content.trim()) {
-            alert('内容不能为空！');
-            return;
-        }
-        line.historyEntries.push({ time: time.trim(), content: content.trim() });
-        saveData();
-        renderHistoryEntries(line);
-        alert('✅ 历史记录添加成功！');
+        openHistoryEditModal('add', -1);
     }
 
-    // 编辑历史记录（仅管理员）
+    // 编辑历史记录（仅管理员，弹出带OCR的编辑窗口）
     function editHistoryEntry(idx) {
         if (!isAdmin) {
             alert('仅管理员/房主可操作，请先登录！');
             return;
         }
+        openHistoryEditModal('edit', idx);
+    }
+
+    // === 线路历史编辑弹窗 + OCR功能 ===
+    let historyEditContext = null;
+
+    function openHistoryEditModal(mode, idx) {
         const line = lines.find(l => l.id === currentLineId);
-        if (!line || !line.historyEntries || !line.historyEntries[idx]) {
-            alert('未找到该历史记录！');
-            return;
+        if (!line) return;
+        if (mode === 'edit' && line.historyEntries && line.historyEntries[idx]) {
+            document.getElementById('historyTimeInput').value = line.historyEntries[idx].time || '';
+            document.getElementById('historyContentInput').value = line.historyEntries[idx].content || '';
+            document.getElementById('historyEditTitle').innerText = '✏️ 编辑历史记录';
+        } else {
+            document.getElementById('historyTimeInput').value = '';
+            document.getElementById('historyContentInput').value = '';
+            document.getElementById('historyEditTitle').innerText = '➕ 添加历史记录';
         }
-        const entry = line.historyEntries[idx];
-        const time = prompt('请输入时间（如：2020年5月1日）：', entry.time);
-        if (time === null) return;
-        if (!time.trim()) {
-            alert('时间不能为空！');
-            return;
+        document.getElementById('ocrStatus').innerText = '';
+        historyEditContext = { mode, idx };
+        document.getElementById('historyEditModal').style.display = 'flex';
+    }
+
+    function closeHistoryEditModal() {
+        document.getElementById('historyEditModal').style.display = 'none';
+        historyEditContext = null;
+    }
+
+    function saveHistoryEntry() {
+        const time = document.getElementById('historyTimeInput').value.trim();
+        const content = document.getElementById('historyContentInput').value.trim();
+        if (!time) { alert('时间不能为空！'); return; }
+        if (!content) { alert('内容不能为空！'); return; }
+        const line = lines.find(l => l.id === currentLineId);
+        if (!line) return;
+        if (!line.historyEntries) line.historyEntries = [];
+        if (historyEditContext.mode === 'edit') {
+            line.historyEntries[historyEditContext.idx] = { time, content };
+        } else {
+            line.historyEntries.push({ time, content });
         }
-        const content = prompt('请输入内容：', entry.content);
-        if (content === null) return;
-        if (!content.trim()) {
-            alert('内容不能为空！');
-            return;
-        }
-        line.historyEntries[idx] = { time: time.trim(), content: content.trim() };
         saveData();
         renderHistoryEntries(line);
-        alert('✅ 历史记录已更新！');
+        closeHistoryEditModal();
+        alert('✅ 历史记录保存成功！');
+    }
+
+    // 从照片识别文字（OCR）
+    function ocrFromImage() {
+        document.getElementById('ocrFileInput').click();
+    }
+
+    async function handleOcrFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const statusEl = document.getElementById('ocrStatus');
+        const ocrBtn = document.getElementById('ocrBtn');
+        statusEl.innerText = '⏳ 正在加载识别引擎（首次约10MB）...';
+        ocrBtn.disabled = true;
+        try {
+            const worker = await Tesseract.createWorker(['chi_sim', 'eng'], {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        statusEl.innerText = '🔍 识别中... ' + Math.round(m.progress * 100) + '%';
+                    } else if (m.status === 'loading language traineddata') {
+                        statusEl.innerText = '⏳ 加载语言数据... ' + Math.round(m.progress * 100) + '%';
+                    }
+                }
+            });
+            const result = await worker.recognize(file);
+            await worker.terminate();
+            const text = result.data.text.trim();
+            if (text) {
+                document.getElementById('historyContentInput').value = text;
+                statusEl.innerText = '✅ 识别完成，请检查并修改文字';
+            } else {
+                statusEl.innerText = '⚠️ 未识别到文字，请手动输入';
+            }
+        } catch (e) {
+            statusEl.innerText = '❌ 识别失败：' + e.message;
+        }
+        ocrBtn.disabled = false;
+        event.target.value = '';
     }
 
     // 删除历史记录（仅管理员）
@@ -7509,6 +7553,30 @@
     renderSidebarCategories(); // 初始化侧边栏自定义分类
     updateHeaderAdminUI(); // 初始化右上角管理员状态
 </script>
+
+<!-- 线路历史编辑弹窗（带OCR图片识别） -->
+<div id="historyEditModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10001; justify-content:center; align-items:center;">
+    <div style="background:white; border-radius:12px; padding:25px; width:90%; max-width:600px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <h3 id="historyEditTitle" style="margin:0 0 20px 0; color:#1f2937;">编辑历史记录</h3>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-weight:600; color:#374151;">📅 时间</label>
+            <input type="text" id="historyTimeInput" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:0.95rem; box-sizing:border-box;" placeholder="如：2020年5月1日">
+        </div>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-weight:600; color:#374151;">📋 内容</label>
+            <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center; flex-wrap:wrap;">
+                <button id="ocrBtn" onclick="ocrFromImage()" style="padding:8px 16px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.9rem; transition:0.2s;">📷 从照片识别文字</button>
+                <span id="ocrStatus" style="color:#6b7280; font-size:0.85rem;"></span>
+            </div>
+            <textarea id="historyContentInput" rows="6" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:0.95rem; resize:vertical; box-sizing:border-box; line-height:1.6;" placeholder="请输入历史内容，或点击上方按钮从照片识别"></textarea>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+            <button onclick="closeHistoryEditModal()" style="padding:10px 20px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.95rem;">取消</button>
+            <button onclick="saveHistoryEntry()" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.95rem;">✅ 保存</button>
+        </div>
+    </div>
+</div>
+<input type="file" id="ocrFileInput" accept="image/*" style="display:none;" onchange="handleOcrFileSelect(event)">
 
 </body>
 </html>
