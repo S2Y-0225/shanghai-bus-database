@@ -434,6 +434,13 @@
                 <tbody id="historicCodes"></tbody>
             </table>
 
+            <!-- 📝 线路历史板块 -->
+            <div class="section-title">📝 线路历史</div>
+            <div id="routeHistoryContainer" style="margin-bottom: 20px;">
+                <div id="routeHistoryContent" style="white-space: pre-wrap; font-size: 0.95rem; color: #374151; line-height: 1.8; background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #fbbf24;"></div>
+                <button class="admin-btn" id="editHistoryBtn" onclick="editLineHistory()" style="display:none; margin-top: 10px;">✏️ 修改线路历史</button>
+            </div>
+
             <!-- 📅 每年线路照片集（按年份分组） -->
             <div class="section-title">📅 年代照片集</div>
             <p style="font-size:0.85rem; color:#6b7280; margin-bottom:10px;">按年份归档的线路实拍照片，记录岁月变迁中的车辆与线路风貌。</p>
@@ -3653,7 +3660,7 @@
             alert('仅管理员/房主可同步数据，请先登录！');
             return;
         }
-        if (!confirm('🔄 同步代码更新\n\n此操作将执行以下操作：\n• 添加代码中新增的线路\n\n⚠️ 您对已有线路的所有修改将完全保留，不会被覆盖：\n✅ 线路走向（终点站）\n✅ 运营时间\n✅ 运营公司\n✅ 票价\n✅ 描述\n✅ 现役配车车型（fleet）\n✅ 线路分类（tags / 自定义分类）\n✅ 现役车辆自编号\n✅ 历史自编号与车型\n✅ 照片（含年份和描述）\n✅ 用户上传的封面图\n✅ 状态\n\n确认要同步代码更新吗？')) return;
+        if (!confirm('🔄 同步代码更新\n\n此操作将执行以下操作：\n• 添加代码中新增的线路\n\n⚠️ 您对已有线路的所有修改将完全保留，不会被覆盖：\n✅ 线路走向（终点站）\n✅ 运营时间\n✅ 运营公司\n✅ 票价\n✅ 描述\n✅ 现役配车车型（fleet）\n✅ 线路分类（tags / 自定义分类）\n✅ 现役车辆自编号\n✅ 历史自编号与车型\n✅ 照片（含年份和描述）\n✅ 用户上传的封面图\n✅ 状态\n✅ 线路历史\n\n确认要同步代码更新吗？')) return;
 
         let newCount = 0;
         const existingIds = new Set(lines.map(l => l.id));
@@ -5491,6 +5498,11 @@
         renderPhotoWall(line);
         renderYearlyPhotoWall(line);
         renderPendingPhotos(line);
+        // 线路历史
+        const historyEl = document.getElementById('routeHistoryContent');
+        if (historyEl) {
+            historyEl.innerText = line.history || '暂无线路历史记录';
+        }
         updateAdminUI();
 
         document.getElementById('modalOverlay').style.display = 'flex';
@@ -7117,6 +7129,26 @@
         alert(`${label}修改成功！`);
     }
 
+    // 修改线路历史（仅管理员）
+    function editLineHistory() {
+        if (!isAdmin) {
+            alert('仅管理员/房主可修改线路历史，请先登录！');
+            return;
+        }
+        const line = lines.find(l => l.id === currentLineId);
+        if (!line) return;
+        const currentValue = line.history || '';
+        const newValue = prompt('请输入线路历史（支持多行文本）：', currentValue);
+        if (newValue === null) return;
+        line.history = newValue;
+        const historyEl2 = document.getElementById('routeHistoryContent');
+        if (historyEl2) {
+            historyEl2.innerText = newValue || '暂无线路历史记录';
+        }
+        saveData();
+        alert('线路历史修改成功！');
+    }
+
     // 更新管理员UI状态
     function updateAdminUI() {
         const loginBar = document.getElementById('adminLoginBar');
@@ -7139,6 +7171,8 @@
             if (fleetAddBtn) fleetAddBtn.style.display = 'block';
             const categoryEdit = document.getElementById('categoryEditSection');
             if (categoryEdit) categoryEdit.style.display = 'flex';
+            const editHistoryBtn = document.getElementById('editHistoryBtn');
+            if (editHistoryBtn) editHistoryBtn.style.display = 'inline-block';
         } else {
             if (loginBar) loginBar.style.display = 'flex';
             if (adminSection) adminSection.style.display = 'none';
@@ -7154,6 +7188,8 @@
             if (fleetAddBtnH) fleetAddBtnH.style.display = 'none';
             const categoryEditH = document.getElementById('categoryEditSection');
             if (categoryEditH) categoryEditH.style.display = 'none';
+            const editHistoryBtnH = document.getElementById('editHistoryBtn');
+            if (editHistoryBtnH) editHistoryBtnH.style.display = 'none';
         }
         
         if (currentLineId) {
