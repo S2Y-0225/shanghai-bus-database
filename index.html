@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -13,7 +13,7 @@
                 data.forEach(brand => {
                     brand.models.forEach(model => {
                         if (!model.deployments) model.deployments = [];
-                        if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'' };
+                        if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'', doorConfig:'' };
                     });
                 });
                 return data;
@@ -23,7 +23,7 @@
         defaults.forEach(brand => {
             brand.models.forEach(model => {
                 if (!model.deployments) model.deployments = [];
-                if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'' };
+                if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'', doorConfig:'' };
             });
         });
         return defaults;
@@ -139,7 +139,7 @@
         }
 
         // 车型规格区域（固定9个字段）
-        const specs = model.specs || { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'' };
+        const specs = model.specs || { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'', doorConfig:'' };
         html += '<div class="vm-section-title">📋 车型规格</div>';
         html += '<div class="vm-specs-grid">';
         const specFields = [
@@ -148,7 +148,8 @@
             ['🪜 踏步', specs.step], ['🔧 悬挂', specs.suspension],
             ['🛞 轮胎', specs.tire], ['🔗 车桥品牌', specs.axleBrand],
             ['🔋 电池品牌/类型(电量)', specs.battery],
-            ['❄️ 空调', specs.airConditioner]
+            ['❄️ 空调', specs.airConditioner],
+            ['🚪 车门布置', specs.doorConfig]
         ];
         specFields.forEach(s => {
             html += '<div class="vm-spec-card"><span class="vm-spec-label">' + s[0] + '</span><span class="vm-spec-value">' + (s[1] ? escapeHtml(s[1]) : '<span style="color:#d1d5db;">未填写</span>') + '</span></div>';
@@ -172,7 +173,7 @@
                     ['⚡ 电机', dep.motor], ['⛽ 燃料', dep.fuel],
                     ['⚙️ 变速器', dep.transmission], ['🪜 踏步', dep.step],
                     ['🔧 悬挂', dep.suspension], ['🛞 轮胎', dep.tire],
-                    ['🔗 车桥品牌', dep.axleBrand], ['🔋 电池', dep.battery], ['❄️ 空调', dep.airConditioner]
+                    ['🔗 车桥品牌', dep.axleBrand], ['🔋 电池', dep.battery], ['❄️ 空调', dep.airConditioner], ['🚪 车门布置', dep.doorConfig]
                 ];
                 specs.forEach(s => {
                     if (s[1]) html += '<div class="vm-spec-item"><span class="vm-spec-label">' + s[0] + ':</span><span class="vm-spec-value">' + escapeHtml(s[1]) + '</span></div>';
@@ -224,7 +225,7 @@
         if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
         deploymentEditContext = { brandId, modelId, mode: 'add', idx: -1 };
         document.getElementById('deploymentEditTitle').innerText = '➕ 添加公司配置';
-        ['depCompany','depVersion','depPurchaseCount','depProductionYear','depMotor','depFuel','depTransmission','depStep','depSuspension','depTire','depAxleBrand','depBattery','depAirConditioner','depRoutes'].forEach(id => {
+        ['depCompany','depVersion','depPurchaseCount','depProductionYear','depMotor','depFuel','depTransmission','depStep','depSuspension','depTire','depAxleBrand','depBattery','depAirConditioner','depDoorConfig','depRoutes'].forEach(id => {
             document.getElementById(id).value = '';
         });
         document.getElementById('deploymentEditModal').style.display = 'flex';
@@ -253,6 +254,7 @@
         document.getElementById('depAxleBrand').value = dep.axleBrand || '';
         document.getElementById('depBattery').value = dep.battery || '';
         document.getElementById('depAirConditioner').value = dep.airConditioner || '';
+        document.getElementById('depDoorConfig').value = dep.doorConfig || '';
         document.getElementById('depRoutes').value = dep.routes || '';
         document.getElementById('deploymentEditModal').style.display = 'flex';
     }
@@ -279,6 +281,7 @@
         document.getElementById('depAxleBrand').value = dep.axleBrand || '';
         document.getElementById('depBattery').value = dep.battery || '';
         document.getElementById('depAirConditioner').value = dep.airConditioner || '';
+        document.getElementById('depDoorConfig').value = dep.doorConfig || '';
         document.getElementById('depRoutes').value = dep.routes || '';
         document.getElementById('deploymentEditModal').style.display = 'flex';
     }
@@ -310,6 +313,7 @@
             axleBrand: document.getElementById('depAxleBrand').value.trim(),
             battery: document.getElementById('depBattery').value.trim(),
             airConditioner: document.getElementById('depAirConditioner').value.trim(),
+            doorConfig: document.getElementById('depDoorConfig').value.trim(),
             routes: document.getElementById('depRoutes').value.trim()
         };
         if (!dep.company) { alert('公司名称不能为空！'); return; }
@@ -333,7 +337,7 @@
         if (!brand) return;
         const model = brand.models.find(m => m.id === modelId);
         if (!model) return;
-        if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'' };
+        if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'', doorConfig:'' };
         specsEditContext = { brandId, modelId };
         document.getElementById('specProductionYear').value = model.specs.productionYear || '';
         document.getElementById('specMotor').value = model.specs.motor || '';
@@ -345,6 +349,7 @@
         document.getElementById('specAxleBrand').value = model.specs.axleBrand || '';
         document.getElementById('specBattery').value = model.specs.battery || '';
         document.getElementById('specAirConditioner').value = model.specs.airConditioner || '';
+        document.getElementById('specDoorConfig').value = model.specs.doorConfig || '';
         document.getElementById('specsEditModal').style.display = 'flex';
     }
 
@@ -370,7 +375,8 @@
             tire: document.getElementById('specTire').value.trim(),
             axleBrand: document.getElementById('specAxleBrand').value.trim(),
             battery: document.getElementById('specBattery').value.trim(),
-            airConditioner: document.getElementById('specAirConditioner').value.trim()
+            airConditioner: document.getElementById('specAirConditioner').value.trim(),
+            doorConfig: document.getElementById('specDoorConfig').value.trim()
         };
         saveVehicleModels();
         closeSpecsModal();
@@ -8205,7 +8211,7 @@
                 data.forEach(brand => {
                     brand.models.forEach(model => {
                         if (!model.deployments) model.deployments = [];
-                        if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'' };
+                        if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'', doorConfig:'' };
                     });
                 });
                 return data;
@@ -8215,7 +8221,7 @@
         defaults.forEach(brand => {
             brand.models.forEach(model => {
                 if (!model.deployments) model.deployments = [];
-                if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'' };
+                if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'', doorConfig:'' };
             });
         });
         return defaults;
@@ -8331,7 +8337,7 @@
         }
 
         // 车型规格区域（固定9个字段）
-        const specs = model.specs || { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'' };
+        const specs = model.specs || { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'', doorConfig:'' };
         html += '<div class="vm-section-title">📋 车型规格</div>';
         html += '<div class="vm-specs-grid">';
         const specFields = [
@@ -8340,7 +8346,8 @@
             ['🪜 踏步', specs.step], ['🔧 悬挂', specs.suspension],
             ['🛞 轮胎', specs.tire], ['🔗 车桥品牌', specs.axleBrand],
             ['🔋 电池品牌/类型(电量)', specs.battery],
-            ['❄️ 空调', specs.airConditioner]
+            ['❄️ 空调', specs.airConditioner],
+            ['🚪 车门布置', specs.doorConfig]
         ];
         specFields.forEach(s => {
             html += '<div class="vm-spec-card"><span class="vm-spec-label">' + s[0] + '</span><span class="vm-spec-value">' + (s[1] ? escapeHtml(s[1]) : '<span style="color:#d1d5db;">未填写</span>') + '</span></div>';
@@ -8364,7 +8371,7 @@
                     ['⚡ 电机', dep.motor], ['⛽ 燃料', dep.fuel],
                     ['⚙️ 变速器', dep.transmission], ['🪜 踏步', dep.step],
                     ['🔧 悬挂', dep.suspension], ['🛞 轮胎', dep.tire],
-                    ['🔗 车桥品牌', dep.axleBrand], ['🔋 电池', dep.battery], ['❄️ 空调', dep.airConditioner]
+                    ['🔗 车桥品牌', dep.axleBrand], ['🔋 电池', dep.battery], ['❄️ 空调', dep.airConditioner], ['🚪 车门布置', dep.doorConfig]
                 ];
                 specs.forEach(s => {
                     if (s[1]) html += '<div class="vm-spec-item"><span class="vm-spec-label">' + s[0] + ':</span><span class="vm-spec-value">' + escapeHtml(s[1]) + '</span></div>';
@@ -8416,7 +8423,7 @@
         if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
         deploymentEditContext = { brandId, modelId, mode: 'add', idx: -1 };
         document.getElementById('deploymentEditTitle').innerText = '➕ 添加公司配置';
-        ['depCompany','depVersion','depPurchaseCount','depProductionYear','depMotor','depFuel','depTransmission','depStep','depSuspension','depTire','depAxleBrand','depBattery','depAirConditioner','depRoutes'].forEach(id => {
+        ['depCompany','depVersion','depPurchaseCount','depProductionYear','depMotor','depFuel','depTransmission','depStep','depSuspension','depTire','depAxleBrand','depBattery','depAirConditioner','depDoorConfig','depRoutes'].forEach(id => {
             document.getElementById(id).value = '';
         });
         document.getElementById('deploymentEditModal').style.display = 'flex';
@@ -8445,6 +8452,7 @@
         document.getElementById('depAxleBrand').value = dep.axleBrand || '';
         document.getElementById('depBattery').value = dep.battery || '';
         document.getElementById('depAirConditioner').value = dep.airConditioner || '';
+        document.getElementById('depDoorConfig').value = dep.doorConfig || '';
         document.getElementById('depRoutes').value = dep.routes || '';
         document.getElementById('deploymentEditModal').style.display = 'flex';
     }
@@ -8471,6 +8479,7 @@
         document.getElementById('depAxleBrand').value = dep.axleBrand || '';
         document.getElementById('depBattery').value = dep.battery || '';
         document.getElementById('depAirConditioner').value = dep.airConditioner || '';
+        document.getElementById('depDoorConfig').value = dep.doorConfig || '';
         document.getElementById('depRoutes').value = dep.routes || '';
         document.getElementById('deploymentEditModal').style.display = 'flex';
     }
@@ -8502,6 +8511,7 @@
             axleBrand: document.getElementById('depAxleBrand').value.trim(),
             battery: document.getElementById('depBattery').value.trim(),
             airConditioner: document.getElementById('depAirConditioner').value.trim(),
+            doorConfig: document.getElementById('depDoorConfig').value.trim(),
             routes: document.getElementById('depRoutes').value.trim()
         };
         if (!dep.company) { alert('公司名称不能为空！'); return; }
@@ -8525,7 +8535,7 @@
         if (!brand) return;
         const model = brand.models.find(m => m.id === modelId);
         if (!model) return;
-        if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'' };
+        if (!model.specs) model.specs = { productionYear:'', motor:'', fuel:'', transmission:'', step:'', suspension:'', tire:'', axleBrand:'', battery:'', airConditioner:'', doorConfig:'' };
         specsEditContext = { brandId, modelId };
         document.getElementById('specProductionYear').value = model.specs.productionYear || '';
         document.getElementById('specMotor').value = model.specs.motor || '';
@@ -8537,6 +8547,7 @@
         document.getElementById('specAxleBrand').value = model.specs.axleBrand || '';
         document.getElementById('specBattery').value = model.specs.battery || '';
         document.getElementById('specAirConditioner').value = model.specs.airConditioner || '';
+        document.getElementById('specDoorConfig').value = model.specs.doorConfig || '';
         document.getElementById('specsEditModal').style.display = 'flex';
     }
 
@@ -8562,7 +8573,8 @@
             tire: document.getElementById('specTire').value.trim(),
             axleBrand: document.getElementById('specAxleBrand').value.trim(),
             battery: document.getElementById('specBattery').value.trim(),
-            airConditioner: document.getElementById('specAirConditioner').value.trim()
+            airConditioner: document.getElementById('specAirConditioner').value.trim(),
+            doorConfig: document.getElementById('specDoorConfig').value.trim()
         };
         saveVehicleModels();
         closeSpecsModal();
@@ -8753,6 +8765,7 @@
             <div class="dep-form-group"><label>🔗 车桥品牌</label><input type="text" id="specAxleBrand" placeholder="如：方盛车桥"></div>
             <div class="dep-form-group" style="grid-column:1/-1;"><label>🔋 电池品牌/类型(电量)</label><input type="text" id="specBattery" placeholder="如：宁德时代/磷酸铁锂(350kWh)"></div>
             <div class="dep-form-group"><label>❄️ 空调</label><input type="text" id="specAirConditioner" placeholder="如：松芝/电空调"></div>
+            <div class="dep-form-group"><label>🚪 车门布置</label><input type="text" id="specDoorConfig" placeholder="如：前中后三门/前后两门"></div>
         </div>
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
             <button onclick="closeSpecsModal()" style="padding:10px 20px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer;">取消</button>
@@ -8779,6 +8792,7 @@
             <div class="dep-form-group"><label>🔗 车桥品牌</label><input type="text" id="depAxleBrand" placeholder="如：方盛车桥"></div>
             <div class="dep-form-group"><label>🔋 电池品牌/类型(电量)</label><input type="text" id="depBattery" placeholder="如：宁德时代/磷酸铁锂(350kWh)"></div>
             <div class="dep-form-group"><label>❄️ 空调</label><input type="text" id="depAirConditioner" placeholder="如：松芝/电空调"></div>
+            <div class="dep-form-group"><label>🚪 车门布置</label><input type="text" id="depDoorConfig" placeholder="如：前中后三门/前后两门"></div>
         </div>
         <div class="dep-form-group" style="grid-column:1/-1;">
             <label>🚌 使用线路（逗号分隔）</label>
