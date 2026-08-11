@@ -8,9 +8,23 @@
     function loadVehicleModels() {
         try {
             const saved = localStorage.getItem(VEHICLE_MODELS_KEY);
-            if (saved) return JSON.parse(saved);
+            if (saved) {
+                const data = JSON.parse(saved);
+                data.forEach(brand => {
+                    brand.models.forEach(model => {
+                        if (!model.deployments) model.deployments = [];
+                    });
+                });
+                return data;
+            }
         } catch(e) {}
-        return JSON.parse(JSON.stringify(DEFAULT_VEHICLE_MODELS));
+        const defaults = JSON.parse(JSON.stringify(DEFAULT_VEHICLE_MODELS));
+        defaults.forEach(brand => {
+            brand.models.forEach(model => {
+                if (!model.deployments) model.deployments = [];
+            });
+        });
+        return defaults;
     }
 
     function saveVehicleModels() {
@@ -121,8 +135,156 @@
         if (isAdmin) {
             html += '<div class="vm-add-btn"><button class="admin-btn admin-btn-success" onclick="addModelParam(\'' + brandId + '\',\'' + modelId + '\')">➕ 添加参数</button></div>';
         }
+
+        // 公司线路配置区域
+        const deployments = model.deployments || [];
+        if (deployments.length > 0 || isAdmin) {
+            html += '<div class="vm-section-title">🏢 公司线路配置</div>';
+            deployments.forEach((dep, idx) => {
+                const adminBtns = isAdmin ? '<div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="editDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">🗑️</button></div>' : '';
+                html += '<div class="vm-deployment-card">';
+                html += '<div class="vm-deployment-header"><span class="vm-deployment-title">🏢 ' + escapeHtml(dep.company || '') + (dep.version ? ' - ' + escapeHtml(dep.version) : '') + '</span>' + adminBtns + '</div>';
+                html += '<div class="vm-deployment-specs">';
+                const specs = [
+                    ['🔢 采购数量', dep.purchaseCount], ['📅 生产年份', dep.productionYear],
+                    ['⚡ 电机', dep.motor], ['⛽ 燃料', dep.fuel],
+                    ['⚙️ 变速器', dep.transmission], ['🪜 踏步', dep.step],
+                    ['🔧 悬挂', dep.suspension], ['🛞 轮胎', dep.tire],
+                    ['🔗 车桥品牌', dep.axleBrand], ['🔋 电池', dep.battery]
+                ];
+                specs.forEach(s => {
+                    if (s[1]) html += '<div class="vm-spec-item"><span class="vm-spec-label">' + s[0] + ':</span><span class="vm-spec-value">' + escapeHtml(s[1]) + '</span></div>';
+                });
+                html += '</div>';
+                // 线路列表
+                if (dep.routes) {
+                    const routeList = dep.routes.split(',').map(r => r.trim()).filter(r => r);
+                    if (routeList.length > 0) {
+                        html += '<div class="vm-routes"><span style="color:#6b7280;font-size:0.9rem;">使用线路：</span>';
+                        routeList.forEach(r => {
+                            html += '<span class="vm-route-badge" onclick="vmOpenRoute(\'' + r.replace(/'/g, "\\'") + '\')">' + escapeHtml(r) + '</span>';
+                        });
+                        html += '</div>';
+                    }
+                }
+                html += '</div>';
+            });
+            if (isAdmin) {
+                html += '<div class="vm-add-btn"><button class="admin-btn admin-btn-success" onclick="addDeployment(\'' + brandId + '\',\'' + modelId + '\')">➕ 添加公司配置</button></div>';
+            }
+        }
+
         html += '</div></div>';
         view.innerHTML = html;
+    }
+
+    // 从线路详情跳转到型号详情
+    function vmOpenFromRoute(brandId, modelId) {
+        document.getElementById('modalOverlay').style.display = 'none';
+        showVehicleModelView(null);
+        showModelDetail(brandId, modelId);
+    }
+
+    // 从型号详情跳转到线路详情
+    function vmOpenRoute(routeName) {
+        const line = lines.find(l => l.name === routeName || l.name === routeName.replace('路', '') || (l.name && l.name.includes(routeName)));
+        if (line) {
+            openModal(line);
+        } else {
+            alert('未找到线路「' + routeName + '」，可能名称不匹配。');
+        }
+    }
+
+    // === 部署配置管理（管理员） ===
+    let deploymentEditContext = null;
+
+    function addDeployment(brandId, modelId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        deploymentEditContext = { brandId, modelId, mode: 'add', idx: -1 };
+        document.getElementById('deploymentEditTitle').innerText = '➕ 添加公司配置';
+        ['depCompany','depVersion','depPurchaseCount','depProductionYear','depMotor','depFuel','depTransmission','depStep','depSuspension','depTire','depAxleBrand','depBattery','depRoutes'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.getElementById('deploymentEditModal').style.display = 'flex';
+    }
+
+    function editDeployment(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.deployments || !model.deployments[idx]) return;
+        const dep = model.deployments[idx];
+        deploymentEditContext = { brandId, modelId, mode: 'edit', idx };
+        document.getElementById('deploymentEditTitle').innerText = '✏️ 编辑公司配置';
+        document.getElementById('depCompany').value = dep.company || '';
+        document.getElementById('depVersion').value = dep.version || '';
+        document.getElementById('depPurchaseCount').value = dep.purchaseCount || '';
+        document.getElementById('depProductionYear').value = dep.productionYear || '';
+        document.getElementById('depMotor').value = dep.motor || '';
+        document.getElementById('depFuel').value = dep.fuel || '';
+        document.getElementById('depTransmission').value = dep.transmission || '';
+        document.getElementById('depStep').value = dep.step || '';
+        document.getElementById('depSuspension').value = dep.suspension || '';
+        document.getElementById('depTire').value = dep.tire || '';
+        document.getElementById('depAxleBrand').value = dep.axleBrand || '';
+        document.getElementById('depBattery').value = dep.battery || '';
+        document.getElementById('depRoutes').value = dep.routes || '';
+        document.getElementById('deploymentEditModal').style.display = 'flex';
+    }
+
+    function closeDeploymentModal() {
+        document.getElementById('deploymentEditModal').style.display = 'none';
+        deploymentEditContext = null;
+    }
+
+    function saveDeployment() {
+        if (!deploymentEditContext) return;
+        const ctx = deploymentEditContext;
+        const brand = vehicleModels.find(b => b.id === ctx.brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === ctx.modelId);
+        if (!model) return;
+        if (!model.deployments) model.deployments = [];
+        const dep = {
+            company: document.getElementById('depCompany').value.trim(),
+            version: document.getElementById('depVersion').value.trim(),
+            purchaseCount: document.getElementById('depPurchaseCount').value.trim(),
+            productionYear: document.getElementById('depProductionYear').value.trim(),
+            motor: document.getElementById('depMotor').value.trim(),
+            fuel: document.getElementById('depFuel').value.trim(),
+            transmission: document.getElementById('depTransmission').value.trim(),
+            step: document.getElementById('depStep').value.trim(),
+            suspension: document.getElementById('depSuspension').value.trim(),
+            tire: document.getElementById('depTire').value.trim(),
+            axleBrand: document.getElementById('depAxleBrand').value.trim(),
+            battery: document.getElementById('depBattery').value.trim(),
+            routes: document.getElementById('depRoutes').value.trim()
+        };
+        if (!dep.company) { alert('公司名称不能为空！'); return; }
+        if (ctx.mode === 'edit') {
+            model.deployments[ctx.idx] = dep;
+        } else {
+            model.deployments.push(dep);
+        }
+        saveVehicleModels();
+        closeDeploymentModal();
+        showModelDetail(ctx.brandId, ctx.modelId);
+        alert('✅ 公司配置保存成功！');
+    }
+
+    function deleteDeployment(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.deployments || !model.deployments[idx]) return;
+        const dep = model.deployments[idx];
+        if (!confirm('确认删除「' + (dep.company || '') + (dep.version ? ' - ' + dep.version : '') + '」的配置吗？')) return;
+        model.deployments.splice(idx, 1);
+        saveVehicleModels();
+        showModelDetail(brandId, modelId);
+        alert('✅ 配置已删除！');
     }
 
     // === 管理员功能：品牌 ===
@@ -383,6 +545,20 @@
         .vm-params-table .col-key { width: 200px; white-space: nowrap; font-weight: 500; color: #6b7280; }
         .vm-params-table .col-val { word-break: break-word; line-height: 1.6; }
         .vm-add-btn { margin: 15px 0; }
+        .vm-deployment-card { background: #f9fafb; border-radius: 10px; padding: 18px; margin-top: 15px; border-left: 4px solid #3b82f6; }
+        .vm-deployment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .vm-deployment-title { font-size: 1.05rem; font-weight: 600; color: #1f2937; }
+        .vm-deployment-specs { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; margin-bottom: 12px; }
+        .vm-spec-item { display: flex; gap: 5px; font-size: 0.9rem; }
+        .vm-spec-label { color: #6b7280; white-space: nowrap; }
+        .vm-spec-value { color: #1f2937; font-weight: 500; word-break: break-word; }
+        .vm-routes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+        .vm-route-badge { background: #dbeafe; color: #1e40af; padding: 3px 12px; border-radius: 15px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .vm-route-badge:hover { background: #3b82f6; color: white; }
+        .vm-section-title { font-size: 1.2rem; font-weight: 700; color: #1f2937; margin: 25px 0 10px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; }
+        .dep-form-group { margin-bottom: 12px; }
+        .dep-form-group label { display: block; margin-bottom: 4px; font-weight: 600; color: #374151; font-size: 0.9rem; }
+        .dep-form-group input, .dep-form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box; }
 
         /* 照片墙样式 */
         .photo-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 15px; }
@@ -636,6 +812,8 @@
             <div id="historyAddBtnContainer" style="margin-top: 10px; display: none;">
                 <button class="admin-btn admin-btn-success" onclick="addHistoryEntry()">➕ 添加历史记录</button>
             </div>
+
+            <div id="routeVehicleModelsContainer" style="margin-top: 20px;"></div>
 
             <p id="modalDesc" style="font-size:1.05rem; color:#4b5563; margin-bottom:20px;"></p>
 
@@ -5828,6 +6006,43 @@
         renderPendingPhotos(line);
         // 线路历史（表格形式）
         renderHistoryEntries(line);
+
+        // 车辆型号关联（搜索哪些型号配置中有该线路）
+        const vmContainer = document.getElementById('routeVehicleModelsContainer');
+        if (vmContainer) {
+            const matches = [];
+            const seen = new Set();
+            vehicleModels.forEach(brand => {
+                brand.models.forEach(model => {
+                    if (model.deployments) {
+                        model.deployments.forEach(dep => {
+                            if (dep.routes) {
+                                const routeList = dep.routes.split(',').map(r => r.trim());
+                                if (routeList.some(r => r === line.name || (line.name && line.name.includes(r)) || (r && r.includes(line.name)))) {
+                                    const key = brand.id + '|' + model.id;
+                                    if (!seen.has(key)) {
+                                        seen.add(key);
+                                        matches.push({ brandId: brand.id, modelId: model.id, modelName: model.name });
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+            if (matches.length > 0) {
+                let h = '<div class="section-title" style="margin-top: 20px;">🚌 车辆型号</div>';
+                h += '<div style="display:flex; flex-wrap:wrap; gap:8px;">';
+                matches.forEach(m => {
+                    h += '<span class="vm-route-badge" style="background:#dcfce7; color:#166534; padding:6px 15px; border-radius:8px; cursor:pointer; font-size:0.95rem;" onclick="vmOpenFromRoute(\'' + m.brandId + '\',\'' + m.modelId + '\')">' + escapeHtml(m.modelName) + '</span>';
+                });
+                h += '</div>';
+                vmContainer.innerHTML = h;
+            } else {
+                vmContainer.innerHTML = '';
+            }
+        }
+
         updateAdminUI();
 
         document.getElementById('modalOverlay').style.display = 'flex';
@@ -7876,9 +8091,23 @@
     function loadVehicleModels() {
         try {
             const saved = localStorage.getItem(VEHICLE_MODELS_KEY);
-            if (saved) return JSON.parse(saved);
+            if (saved) {
+                const data = JSON.parse(saved);
+                data.forEach(brand => {
+                    brand.models.forEach(model => {
+                        if (!model.deployments) model.deployments = [];
+                    });
+                });
+                return data;
+            }
         } catch(e) {}
-        return JSON.parse(JSON.stringify(DEFAULT_VEHICLE_MODELS));
+        const defaults = JSON.parse(JSON.stringify(DEFAULT_VEHICLE_MODELS));
+        defaults.forEach(brand => {
+            brand.models.forEach(model => {
+                if (!model.deployments) model.deployments = [];
+            });
+        });
+        return defaults;
     }
 
     function saveVehicleModels() {
@@ -7989,8 +8218,156 @@
         if (isAdmin) {
             html += '<div class="vm-add-btn"><button class="admin-btn admin-btn-success" onclick="addModelParam(\'' + brandId + '\',\'' + modelId + '\')">➕ 添加参数</button></div>';
         }
+
+        // 公司线路配置区域
+        const deployments = model.deployments || [];
+        if (deployments.length > 0 || isAdmin) {
+            html += '<div class="vm-section-title">🏢 公司线路配置</div>';
+            deployments.forEach((dep, idx) => {
+                const adminBtns = isAdmin ? '<div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="editDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">🗑️</button></div>' : '';
+                html += '<div class="vm-deployment-card">';
+                html += '<div class="vm-deployment-header"><span class="vm-deployment-title">🏢 ' + escapeHtml(dep.company || '') + (dep.version ? ' - ' + escapeHtml(dep.version) : '') + '</span>' + adminBtns + '</div>';
+                html += '<div class="vm-deployment-specs">';
+                const specs = [
+                    ['🔢 采购数量', dep.purchaseCount], ['📅 生产年份', dep.productionYear],
+                    ['⚡ 电机', dep.motor], ['⛽ 燃料', dep.fuel],
+                    ['⚙️ 变速器', dep.transmission], ['🪜 踏步', dep.step],
+                    ['🔧 悬挂', dep.suspension], ['🛞 轮胎', dep.tire],
+                    ['🔗 车桥品牌', dep.axleBrand], ['🔋 电池', dep.battery]
+                ];
+                specs.forEach(s => {
+                    if (s[1]) html += '<div class="vm-spec-item"><span class="vm-spec-label">' + s[0] + ':</span><span class="vm-spec-value">' + escapeHtml(s[1]) + '</span></div>';
+                });
+                html += '</div>';
+                // 线路列表
+                if (dep.routes) {
+                    const routeList = dep.routes.split(',').map(r => r.trim()).filter(r => r);
+                    if (routeList.length > 0) {
+                        html += '<div class="vm-routes"><span style="color:#6b7280;font-size:0.9rem;">使用线路：</span>';
+                        routeList.forEach(r => {
+                            html += '<span class="vm-route-badge" onclick="vmOpenRoute(\'' + r.replace(/'/g, "\\'") + '\')">' + escapeHtml(r) + '</span>';
+                        });
+                        html += '</div>';
+                    }
+                }
+                html += '</div>';
+            });
+            if (isAdmin) {
+                html += '<div class="vm-add-btn"><button class="admin-btn admin-btn-success" onclick="addDeployment(\'' + brandId + '\',\'' + modelId + '\')">➕ 添加公司配置</button></div>';
+            }
+        }
+
         html += '</div></div>';
         view.innerHTML = html;
+    }
+
+    // 从线路详情跳转到型号详情
+    function vmOpenFromRoute(brandId, modelId) {
+        document.getElementById('modalOverlay').style.display = 'none';
+        showVehicleModelView(null);
+        showModelDetail(brandId, modelId);
+    }
+
+    // 从型号详情跳转到线路详情
+    function vmOpenRoute(routeName) {
+        const line = lines.find(l => l.name === routeName || l.name === routeName.replace('路', '') || (l.name && l.name.includes(routeName)));
+        if (line) {
+            openModal(line);
+        } else {
+            alert('未找到线路「' + routeName + '」，可能名称不匹配。');
+        }
+    }
+
+    // === 部署配置管理（管理员） ===
+    let deploymentEditContext = null;
+
+    function addDeployment(brandId, modelId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        deploymentEditContext = { brandId, modelId, mode: 'add', idx: -1 };
+        document.getElementById('deploymentEditTitle').innerText = '➕ 添加公司配置';
+        ['depCompany','depVersion','depPurchaseCount','depProductionYear','depMotor','depFuel','depTransmission','depStep','depSuspension','depTire','depAxleBrand','depBattery','depRoutes'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.getElementById('deploymentEditModal').style.display = 'flex';
+    }
+
+    function editDeployment(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.deployments || !model.deployments[idx]) return;
+        const dep = model.deployments[idx];
+        deploymentEditContext = { brandId, modelId, mode: 'edit', idx };
+        document.getElementById('deploymentEditTitle').innerText = '✏️ 编辑公司配置';
+        document.getElementById('depCompany').value = dep.company || '';
+        document.getElementById('depVersion').value = dep.version || '';
+        document.getElementById('depPurchaseCount').value = dep.purchaseCount || '';
+        document.getElementById('depProductionYear').value = dep.productionYear || '';
+        document.getElementById('depMotor').value = dep.motor || '';
+        document.getElementById('depFuel').value = dep.fuel || '';
+        document.getElementById('depTransmission').value = dep.transmission || '';
+        document.getElementById('depStep').value = dep.step || '';
+        document.getElementById('depSuspension').value = dep.suspension || '';
+        document.getElementById('depTire').value = dep.tire || '';
+        document.getElementById('depAxleBrand').value = dep.axleBrand || '';
+        document.getElementById('depBattery').value = dep.battery || '';
+        document.getElementById('depRoutes').value = dep.routes || '';
+        document.getElementById('deploymentEditModal').style.display = 'flex';
+    }
+
+    function closeDeploymentModal() {
+        document.getElementById('deploymentEditModal').style.display = 'none';
+        deploymentEditContext = null;
+    }
+
+    function saveDeployment() {
+        if (!deploymentEditContext) return;
+        const ctx = deploymentEditContext;
+        const brand = vehicleModels.find(b => b.id === ctx.brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === ctx.modelId);
+        if (!model) return;
+        if (!model.deployments) model.deployments = [];
+        const dep = {
+            company: document.getElementById('depCompany').value.trim(),
+            version: document.getElementById('depVersion').value.trim(),
+            purchaseCount: document.getElementById('depPurchaseCount').value.trim(),
+            productionYear: document.getElementById('depProductionYear').value.trim(),
+            motor: document.getElementById('depMotor').value.trim(),
+            fuel: document.getElementById('depFuel').value.trim(),
+            transmission: document.getElementById('depTransmission').value.trim(),
+            step: document.getElementById('depStep').value.trim(),
+            suspension: document.getElementById('depSuspension').value.trim(),
+            tire: document.getElementById('depTire').value.trim(),
+            axleBrand: document.getElementById('depAxleBrand').value.trim(),
+            battery: document.getElementById('depBattery').value.trim(),
+            routes: document.getElementById('depRoutes').value.trim()
+        };
+        if (!dep.company) { alert('公司名称不能为空！'); return; }
+        if (ctx.mode === 'edit') {
+            model.deployments[ctx.idx] = dep;
+        } else {
+            model.deployments.push(dep);
+        }
+        saveVehicleModels();
+        closeDeploymentModal();
+        showModelDetail(ctx.brandId, ctx.modelId);
+        alert('✅ 公司配置保存成功！');
+    }
+
+    function deleteDeployment(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.deployments || !model.deployments[idx]) return;
+        const dep = model.deployments[idx];
+        if (!confirm('确认删除「' + (dep.company || '') + (dep.version ? ' - ' + dep.version : '') + '」的配置吗？')) return;
+        model.deployments.splice(idx, 1);
+        saveVehicleModels();
+        showModelDetail(brandId, modelId);
+        alert('✅ 配置已删除！');
     }
 
     // === 管理员功能：品牌 ===
@@ -8146,6 +8523,35 @@
     </div>
 </div>
 <input type="file" id="ocrFileInput" accept="image/*" style="display:none;" onchange="handleOcrFileSelect(event)">
+
+<!-- 部署配置编辑弹窗 -->
+<div id="deploymentEditModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10002; justify-content:center; align-items:center;">
+    <div style="background:white; border-radius:12px; padding:25px; width:90%; max-width:650px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <h3 id="deploymentEditTitle" style="margin:0 0 20px 0; color:#1f2937;">添加公司配置</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="dep-form-group"><label>🏢 公司名称</label><input type="text" id="depCompany" placeholder="如：巴士四公司"></div>
+            <div class="dep-form-group"><label>📦 批次/版本</label><input type="text" id="depVersion" placeholder="如：第一批"></div>
+            <div class="dep-form-group"><label>🔢 采购数量</label><input type="text" id="depPurchaseCount" placeholder="如：30辆"></div>
+            <div class="dep-form-group"><label>📅 生产年份</label><input type="text" id="depProductionYear" placeholder="如：2020"></div>
+            <div class="dep-form-group"><label>⚡ 电机</label><input type="text" id="depMotor" placeholder="如：BYD-220kW"></div>
+            <div class="dep-form-group"><label>⛽ 燃料</label><input type="text" id="depFuel" placeholder="如：纯电动"></div>
+            <div class="dep-form-group"><label>⚙️ 变速器</label><input type="text" id="depTransmission" placeholder="如：平行轴式减速箱"></div>
+            <div class="dep-form-group"><label>🪜 踏步</label><input type="text" id="depStep" placeholder="如：一级踏步"></div>
+            <div class="dep-form-group"><label>🔧 悬挂</label><input type="text" id="depSuspension" placeholder="如：气囊悬挂"></div>
+            <div class="dep-form-group"><label>🛞 轮胎</label><input type="text" id="depTire" placeholder="如：双钱 275/70R22.5"></div>
+            <div class="dep-form-group"><label>🔗 车桥品牌</label><input type="text" id="depAxleBrand" placeholder="如：方盛车桥"></div>
+            <div class="dep-form-group"><label>🔋 电池品牌/类型(电量)</label><input type="text" id="depBattery" placeholder="如：宁德时代/磷酸铁锂(350kWh)"></div>
+        </div>
+        <div class="dep-form-group" style="grid-column:1/-1;">
+            <label>🚌 使用线路（逗号分隔）</label>
+            <textarea id="depRoutes" rows="2" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:0.9rem; box-sizing:border-box; resize:vertical;" placeholder="如：71路,127路,49路"></textarea>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+            <button onclick="closeDeploymentModal()" style="padding:10px 20px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer;">取消</button>
+            <button onclick="saveDeployment()" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer;">✅ 保存</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
