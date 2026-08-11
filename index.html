@@ -162,7 +162,7 @@
         if (deployments.length > 0 || isAdmin) {
             html += '<div class="vm-section-title">🏢 公司线路配置</div>';
             deployments.forEach((dep, idx) => {
-                const adminBtns = isAdmin ? '<div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="editDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">🗑️</button></div>' : '';
+                const adminBtns = isAdmin ? '<div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="duplicateDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')" title="复制">📋</button><button class="historic-btn historic-btn-edit" onclick="editDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">🗑️</button></div>' : '';
                 html += '<div class="vm-deployment-card">';
                 html += '<div class="vm-deployment-header"><span class="vm-deployment-title">🏢 ' + escapeHtml(dep.company || '') + (dep.version ? ' - ' + escapeHtml(dep.version) : '') + '</span>' + adminBtns + '</div>';
                 html += '<div class="vm-deployment-specs">';
@@ -226,6 +226,32 @@
         ['depCompany','depVersion','depPurchaseCount','depProductionYear','depMotor','depFuel','depTransmission','depStep','depSuspension','depTire','depAxleBrand','depBattery','depRoutes'].forEach(id => {
             document.getElementById(id).value = '';
         });
+        document.getElementById('deploymentEditModal').style.display = 'flex';
+    }
+
+    // 复制部署配置（管理员）
+    function duplicateDeployment(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.deployments || !model.deployments[idx]) return;
+        const dep = model.deployments[idx];
+        deploymentEditContext = { brandId, modelId, mode: 'add', idx: -1 };
+        document.getElementById('deploymentEditTitle').innerText = '📋 复制公司配置（修改后保存为新配置）';
+        document.getElementById('depCompany').value = dep.company || '';
+        document.getElementById('depVersion').value = dep.version || '';
+        document.getElementById('depPurchaseCount').value = dep.purchaseCount || '';
+        document.getElementById('depProductionYear').value = dep.productionYear || '';
+        document.getElementById('depMotor').value = dep.motor || '';
+        document.getElementById('depFuel').value = dep.fuel || '';
+        document.getElementById('depTransmission').value = dep.transmission || '';
+        document.getElementById('depStep').value = dep.step || '';
+        document.getElementById('depSuspension').value = dep.suspension || '';
+        document.getElementById('depTire').value = dep.tire || '';
+        document.getElementById('depAxleBrand').value = dep.axleBrand || '';
+        document.getElementById('depBattery').value = dep.battery || '';
+        document.getElementById('depRoutes').value = dep.routes || '';
         document.getElementById('deploymentEditModal').style.display = 'flex';
     }
 
@@ -8322,7 +8348,7 @@
         if (deployments.length > 0 || isAdmin) {
             html += '<div class="vm-section-title">🏢 公司线路配置</div>';
             deployments.forEach((dep, idx) => {
-                const adminBtns = isAdmin ? '<div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="editDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">🗑️</button></div>' : '';
+                const adminBtns = isAdmin ? '<div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="duplicateDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')" title="复制">📋</button><button class="historic-btn historic-btn-edit" onclick="editDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteDeployment(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">🗑️</button></div>' : '';
                 html += '<div class="vm-deployment-card">';
                 html += '<div class="vm-deployment-header"><span class="vm-deployment-title">🏢 ' + escapeHtml(dep.company || '') + (dep.version ? ' - ' + escapeHtml(dep.version) : '') + '</span>' + adminBtns + '</div>';
                 html += '<div class="vm-deployment-specs">';
@@ -8386,6 +8412,32 @@
         ['depCompany','depVersion','depPurchaseCount','depProductionYear','depMotor','depFuel','depTransmission','depStep','depSuspension','depTire','depAxleBrand','depBattery','depRoutes'].forEach(id => {
             document.getElementById(id).value = '';
         });
+        document.getElementById('deploymentEditModal').style.display = 'flex';
+    }
+
+    // 复制部署配置（管理员）
+    function duplicateDeployment(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.deployments || !model.deployments[idx]) return;
+        const dep = model.deployments[idx];
+        deploymentEditContext = { brandId, modelId, mode: 'add', idx: -1 };
+        document.getElementById('deploymentEditTitle').innerText = '📋 复制公司配置（修改后保存为新配置）';
+        document.getElementById('depCompany').value = dep.company || '';
+        document.getElementById('depVersion').value = dep.version || '';
+        document.getElementById('depPurchaseCount').value = dep.purchaseCount || '';
+        document.getElementById('depProductionYear').value = dep.productionYear || '';
+        document.getElementById('depMotor').value = dep.motor || '';
+        document.getElementById('depFuel').value = dep.fuel || '';
+        document.getElementById('depTransmission').value = dep.transmission || '';
+        document.getElementById('depStep').value = dep.step || '';
+        document.getElementById('depSuspension').value = dep.suspension || '';
+        document.getElementById('depTire').value = dep.tire || '';
+        document.getElementById('depAxleBrand').value = dep.axleBrand || '';
+        document.getElementById('depBattery').value = dep.battery || '';
+        document.getElementById('depRoutes').value = dep.routes || '';
         document.getElementById('deploymentEditModal').style.display = 'flex';
     }
 
