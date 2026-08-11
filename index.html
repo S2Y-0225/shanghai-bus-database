@@ -2,7 +2,258 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js">
+    // ============= 车辆型号库功能 =============
+
+    function loadVehicleModels() {
+        try {
+            const saved = localStorage.getItem(VEHICLE_MODELS_KEY);
+            if (saved) return JSON.parse(saved);
+        } catch(e) {}
+        return JSON.parse(JSON.stringify(DEFAULT_VEHICLE_MODELS));
+    }
+
+    function saveVehicleModels() {
+        try {
+            localStorage.setItem(VEHICLE_MODELS_KEY, JSON.stringify(vehicleModels));
+        } catch(e) {
+            alert('保存失败：' + e.message);
+        }
+    }
+
+    function showVehicleModelView(navItem) {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if (navItem) navItem.classList.add('active');
+        document.getElementById('lineGrid').style.display = 'none';
+        document.getElementById('vehicleModelView').style.display = 'block';
+        vmCurrentBrand = null;
+        vmCurrentModel = null;
+        renderVehicleBrands();
+    }
+
+    function hideVehicleModelView() {
+        const v = document.getElementById('vehicleModelView');
+        if (v) v.style.display = 'none';
+        const g = document.getElementById('lineGrid');
+        if (g) g.style.display = 'grid';
+    }
+
+    // 品牌列表
+    function renderVehicleBrands() {
+        const view = document.getElementById('vehicleModelView');
+        let html = '<div class="vm-view">';
+        html += '<div class="vm-breadcrumb"><span class="vm-breadcrumb-item">🚌 车辆型号库</span></div>';
+        html += '<div class="vm-grid">';
+        vehicleModels.forEach(brand => {
+            const adminBtns = isAdmin ? '<div class="vm-card-actions"><button class="historic-btn historic-btn-edit" onclick="event.stopPropagation();editVehicleBrand(\'' + brand.id + '\')">✏️</button><button class="historic-btn historic-btn-delete" onclick="event.stopPropagation();deleteVehicleBrand(\'' + brand.id + '\')">🗑️</button></div>' : '';
+            html += '<div class="vm-card" onclick="showBrandModels(\'' + brand.id + '\')">';
+            html += '<div class="vm-card-icon">' + (brand.icon || '🚌') + '</div>';
+            html += '<div class="vm-card-name">' + escapeHtml(brand.name) + '</div>';
+            html += '<div class="vm-card-count">' + brand.models.length + ' 个型号</div>';
+            html += adminBtns + '</div>';
+        });
+        if (isAdmin) {
+            html += '<div class="vm-card" onclick="addVehicleBrand()" style="border:2px dashed #d1d5db;color:#6b7280;"><div class="vm-card-icon">➕</div><div class="vm-card-name">添加品牌</div></div>';
+        }
+        html += '</div></div>';
+        view.innerHTML = html;
+    }
+
+    // 型号列表
+    function showBrandModels(brandId) {
+        vmCurrentBrand = brandId;
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const view = document.getElementById('vehicleModelView');
+        let html = '<div class="vm-view">';
+        html += '<div class="vm-breadcrumb">';
+        html += '<span class="vm-breadcrumb-item" onclick="renderVehicleBrands()">🚌 车辆型号库</span>';
+        html += '<span class="vm-breadcrumb-sep">›</span>';
+        html += '<span>' + escapeHtml(brand.name) + '</span>';
+        html += '</div>';
+        html += '<div class="vm-grid">';
+        brand.models.forEach(model => {
+            const adminBtns = isAdmin ? '<div class="vm-card-actions"><button class="historic-btn historic-btn-edit" onclick="event.stopPropagation();editVehicleModel(\'' + brandId + '\',\'' + model.id + '\')">✏️</button><button class="historic-btn historic-btn-delete" onclick="event.stopPropagation();deleteVehicleModel(\'' + brandId + '\',\'' + model.id + '\')">🗑️</button></div>' : '';
+            html += '<div class="vm-card" onclick="showModelDetail(\'' + brandId + '\',\'' + model.id + '\')">';
+            html += '<div class="vm-card-icon">🚐</div>';
+            html += '<div class="vm-card-name">' + escapeHtml(model.name) + '</div>';
+            html += '<div class="vm-card-count">' + (model.params ? model.params.length : 0) + ' 项参数</div>';
+            html += adminBtns + '</div>';
+        });
+        if (isAdmin) {
+            html += '<div class="vm-card" onclick="addVehicleModel(\'' + brandId + '\')" style="border:2px dashed #d1d5db;color:#6b7280;"><div class="vm-card-icon">➕</div><div class="vm-card-name">添加型号</div></div>';
+        }
+        html += '</div></div>';
+        view.innerHTML = html;
+    }
+
+    // 型号详情
+    function showModelDetail(brandId, modelId) {
+        vmCurrentBrand = brandId;
+        vmCurrentModel = modelId;
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model) return;
+        const view = document.getElementById('vehicleModelView');
+        let html = '<div class="vm-view">';
+        html += '<div class="vm-breadcrumb">';
+        html += '<span class="vm-breadcrumb-item" onclick="renderVehicleBrands()">🚌 车辆型号库</span>';
+        html += '<span class="vm-breadcrumb-sep">›</span>';
+        html += '<span class="vm-breadcrumb-item" onclick="showBrandModels(\'' + brandId + '\')">' + escapeHtml(brand.name) + '</span>';
+        html += '<span class="vm-breadcrumb-sep">›</span>';
+        html += '<span>' + escapeHtml(model.name) + '</span>';
+        html += '</div>';
+        html += '<div class="vm-detail">';
+        html += '<div class="vm-detail-title">🚐 ' + escapeHtml(model.name) + ' 参数配置</div>';
+        if (model.params && model.params.length > 0) {
+            html += '<table class="vm-params-table"><thead><tr>';
+            html += isAdmin ? '<th>参数名</th><th>参数值</th><th>操作</th>' : '<th>参数名</th><th>参数值</th>';
+            html += '</tr></thead><tbody>';
+            model.params.forEach((p, idx) => {
+                const adminBtns = isAdmin ? '<td><div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="editModelParam(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteModelParam(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">🗑️</button></div></td>' : '';
+                html += '<tr><td class="col-key">' + escapeHtml(p.k) + '</td><td class="col-val">' + escapeHtml(p.v) + '</td>' + adminBtns + '</tr>';
+            });
+            html += '</tbody></table>';
+        } else {
+            html += '<p style="color:#9ca3af;text-align:center;padding:20px;">暂无参数配置</p>';
+        }
+        if (isAdmin) {
+            html += '<div class="vm-add-btn"><button class="admin-btn admin-btn-success" onclick="addModelParam(\'' + brandId + '\',\'' + modelId + '\')">➕ 添加参数</button></div>';
+        }
+        html += '</div></div>';
+        view.innerHTML = html;
+    }
+
+    // === 管理员功能：品牌 ===
+    function addVehicleBrand() {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const name = prompt('请输入品牌名称：', '如：宇通客车');
+        if (!name || !name.trim()) return;
+        const icon = prompt('请输入品牌图标（emoji）：', '🚌');
+        const id = 'brand_' + Date.now();
+        vehicleModels.push({ id, name: name.trim(), icon: icon || '🚌', models: [] });
+        saveVehicleModels();
+        renderVehicleBrands();
+        alert('✅ 品牌添加成功！');
+    }
+
+    function editVehicleBrand(brandId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const name = prompt('请输入品牌名称：', brand.name);
+        if (!name || !name.trim()) return;
+        const icon = prompt('请输入品牌图标（emoji）：', brand.icon || '🚌');
+        brand.name = name.trim();
+        brand.icon = icon || brand.icon || '🚌';
+        saveVehicleModels();
+        renderVehicleBrands();
+        alert('✅ 品牌修改成功！');
+    }
+
+    function deleteVehicleBrand(brandId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        if (!confirm('确认删除品牌「' + brand.name + '」及其所有型号吗？')) return;
+        vehicleModels = vehicleModels.filter(b => b.id !== brandId);
+        saveVehicleModels();
+        renderVehicleBrands();
+        alert('✅ 品牌已删除！');
+    }
+
+    // === 管理员功能：型号 ===
+    function addVehicleModel(brandId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const name = prompt('请输入型号名称：', '如：SWB6108EV05G');
+        if (!name || !name.trim()) return;
+        const id = 'model_' + Date.now();
+        brand.models.push({ id, name: name.trim(), params: [] });
+        saveVehicleModels();
+        showBrandModels(brandId);
+        alert('✅ 型号添加成功！');
+    }
+
+    function editVehicleModel(brandId, modelId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model) return;
+        const name = prompt('请输入型号名称：', model.name);
+        if (!name || !name.trim()) return;
+        model.name = name.trim();
+        saveVehicleModels();
+        showBrandModels(brandId);
+        alert('✅ 型号修改成功！');
+    }
+
+    function deleteVehicleModel(brandId, modelId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model) return;
+        if (!confirm('确认删除型号「' + model.name + '」吗？')) return;
+        brand.models = brand.models.filter(m => m.id !== modelId);
+        saveVehicleModels();
+        showBrandModels(brandId);
+        alert('✅ 型号已删除！');
+    }
+
+    // === 管理员功能：参数 ===
+    function addModelParam(brandId, modelId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model) return;
+        const k = prompt('请输入参数名：', '如：车长');
+        if (!k || !k.trim()) return;
+        const v = prompt('请输入参数值：', '如：10.5m');
+        if (v === null) return;
+        if (!model.params) model.params = [];
+        model.params.push({ k: k.trim(), v: v.trim() });
+        saveVehicleModels();
+        showModelDetail(brandId, modelId);
+        alert('✅ 参数添加成功！');
+    }
+
+    function editModelParam(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.params || !model.params[idx]) return;
+        const p = model.params[idx];
+        const k = prompt('请输入参数名：', p.k);
+        if (!k || !k.trim()) return;
+        const v = prompt('请输入参数值：', p.v);
+        if (v === null) return;
+        model.params[idx] = { k: k.trim(), v: v.trim() };
+        saveVehicleModels();
+        showModelDetail(brandId, modelId);
+        alert('✅ 参数修改成功！');
+    }
+
+    function deleteModelParam(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.params || !model.params[idx]) return;
+        const p = model.params[idx];
+        if (!confirm('确认删除参数「' + p.k + '：' + p.v + '」吗？')) return;
+        model.params.splice(idx, 1);
+        saveVehicleModels();
+        showModelDetail(brandId, modelId);
+        alert('✅ 参数已删除！');
+    }
+
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>上海公交资料库 | 魔都公交记忆</title>
     <style>
@@ -110,6 +361,28 @@
         .history-table .col-content { word-break: break-word; line-height: 1.6; }
         .history-table tbody tr:hover { background: #f9fafb; }
         .history-table tbody tr { border-bottom: 2px solid #f3f4f6; }
+
+        /* 车辆型号库样式 */
+        .vm-view { padding: 5px; }
+        .vm-breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; font-size: 0.95rem; flex-wrap: wrap; }
+        .vm-breadcrumb-item { cursor: pointer; color: #3b82f6; }
+        .vm-breadcrumb-item:hover { text-decoration: underline; }
+        .vm-breadcrumb-sep { color: #9ca3af; }
+        .vm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .vm-card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; text-align: center; }
+        .vm-card:hover { transform: translateY(-3px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+        .vm-card-icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .vm-card-name { font-size: 1.1rem; font-weight: 600; color: #1f2937; }
+        .vm-card-count { font-size: 0.85rem; color: #6b7280; margin-top: 5px; }
+        .vm-card-actions { margin-top: 10px; display: flex; gap: 5px; justify-content: center; }
+        .vm-detail { background: var(--card-bg); border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .vm-detail-title { font-size: 1.5rem; font-weight: 700; color: #1f2937; margin-bottom: 20px; }
+        .vm-params-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .vm-params-table th, .vm-params-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+        .vm-params-table th { background: #f3f4f6; font-weight: 600; width: 200px; white-space: nowrap; }
+        .vm-params-table .col-key { width: 200px; white-space: nowrap; font-weight: 500; color: #6b7280; }
+        .vm-params-table .col-val { word-break: break-word; line-height: 1.6; }
+        .vm-add-btn { margin: 15px 0; }
 
         /* 照片墙样式 */
         .photo-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 15px; }
@@ -309,6 +582,8 @@
         <div class="nav-item active" onclick="filterByCategory('all', this)">全部线路</div>
         <div class="nav-item" onclick="filterByCategory('active', this)">🟢 运营中</div>
         <div class="nav-item" onclick="filterByCategory('archived', this)">🚫 已撤销</div>
+        <hr style="margin: 10px 0; border: none; border-top: 1px solid #e5e7eb;">
+        <div class="nav-item" onclick="showVehicleModelView(this)">🚌 车辆型号库</div>
         <div id="sidebarCategories">
             <!-- 分类项由 renderSidebarCategories() 动态渲染 -->
         </div>
@@ -316,6 +591,7 @@
 
     <main class="content-area">
         <div class="grid" id="lineGrid"></div>
+        <div id="vehicleModelView" style="display:none;"></div>
     </main>
 </div>
 
@@ -551,6 +827,44 @@
     const DELETED_LINES_KEY = 'bus_archive_deleted_lines';
     const CATEGORY_CONFIG_KEY = 'bus_archive_category_config';
     const DELETED_CATEGORIES_KEY = 'bus_archive_deleted_categories';
+    const VEHICLE_MODELS_KEY = 'bus_archive_vehicle_models';
+
+    // 车辆型号默认数据
+    const DEFAULT_VEHICLE_MODELS = [
+        { id: 'brand_swb', name: '申沃客车', icon: '🚌', models: [
+            { id: 'swb6108ev05g', name: 'SWB6108EV05G', params: [
+                { k: '车型代号', v: 'SWB6108EV05G' }, { k: '品牌', v: '申沃' },
+                { k: '生产商', v: '上海申沃客车有限公司' }, { k: '车长', v: '10.5m' },
+                { k: '动力类型', v: '纯电动' }, { k: '座位数', v: '30' }, { k: '额定载客', v: '80' }
+            ]},
+            { id: 'swb6128ev56', name: 'SWB6128EV56', params: [
+                { k: '车型代号', v: 'SWB6128EV56' }, { k: '品牌', v: '申沃' },
+                { k: '生产商', v: '上海申沃客车有限公司' }, { k: '车长', v: '12m' },
+                { k: '动力类型', v: '纯电动' }, { k: '座位数', v: '35' }, { k: '额定载客', v: '90' }
+            ]}
+        ]},
+        { id: 'brand_sxc', name: '上汽客车', icon: '🚐', models: [
+            { id: 'sxc6105gbevlfr', name: 'SXC6105GBEVLFR', params: [
+                { k: '车型代号', v: 'SXC6105GBEVLFR' }, { k: '品牌', v: '上汽' },
+                { k: '生产商', v: '上海汽车集团股份有限公司' }, { k: '车长', v: '10.5m' },
+                { k: '动力类型', v: '纯电动' }, { k: '座位数', v: '28' }, { k: '额定载客', v: '75' }
+            ]}
+        ]},
+        { id: 'brand_slk', name: '申龙客车', icon: '🚍', models: [
+            { id: 'slk6109udhevl', name: 'SLK6109UDHEVL', params: [
+                { k: '车型代号', v: 'SLK6109UDHEVL' }, { k: '品牌', v: '申龙' },
+                { k: '生产商', v: '上海申龙客车有限公司' }, { k: '车长', v: '10.5m' },
+                { k: '动力类型', v: '混合动力' }, { k: '座位数', v: '30' }, { k: '额定载客', v: '80' }
+            ]}
+        ]},
+        { id: 'brand_xml', name: '厦门金旅', icon: '🚎', models: [
+            { id: 'xml6105j15c', name: 'XML6105J15C', params: [
+                { k: '车型代号', v: 'XML6105J15C' }, { k: '品牌', v: '金旅' },
+                { k: '生产商', v: '厦门金龙旅行车有限公司' }, { k: '车长', v: '10.5m' },
+                { k: '动力类型', v: '柴油' }, { k: '座位数', v: '32' }, { k: '额定载客', v: '85' }
+            ]}
+        ]}
+    ];
     const DELETED_NESTED_FOLDERS_KEY = 'bus_archive_deleted_nested_folders';
     const CURRENT_VERSION = 92;
 
@@ -2942,6 +3256,9 @@
     ];
 
     let lines = loadData();
+    let vehicleModels = loadVehicleModels();
+    let vmCurrentBrand = null;
+    let vmCurrentModel = null;
 
     let currentCategory = 'all';
     let currentLineId = null;
@@ -7478,6 +7795,7 @@
 
     // 分类筛选函数
     function filterByCategory(category, element) {
+        hideVehicleModelView();
         currentCategory = category;
         // 仅"普通线路"使用公司文件夹导航，其他分类直接显示线路
         if (category === 'normal') {
@@ -7552,7 +7870,258 @@
     renderLines();
     renderSidebarCategories(); // 初始化侧边栏自定义分类
     updateHeaderAdminUI(); // 初始化右上角管理员状态
-</script>
+
+    // ============= 车辆型号库功能 =============
+
+    function loadVehicleModels() {
+        try {
+            const saved = localStorage.getItem(VEHICLE_MODELS_KEY);
+            if (saved) return JSON.parse(saved);
+        } catch(e) {}
+        return JSON.parse(JSON.stringify(DEFAULT_VEHICLE_MODELS));
+    }
+
+    function saveVehicleModels() {
+        try {
+            localStorage.setItem(VEHICLE_MODELS_KEY, JSON.stringify(vehicleModels));
+        } catch(e) {
+            alert('保存失败：' + e.message);
+        }
+    }
+
+    function showVehicleModelView(navItem) {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if (navItem) navItem.classList.add('active');
+        document.getElementById('lineGrid').style.display = 'none';
+        document.getElementById('vehicleModelView').style.display = 'block';
+        vmCurrentBrand = null;
+        vmCurrentModel = null;
+        renderVehicleBrands();
+    }
+
+    function hideVehicleModelView() {
+        const v = document.getElementById('vehicleModelView');
+        if (v) v.style.display = 'none';
+        const g = document.getElementById('lineGrid');
+        if (g) g.style.display = 'grid';
+    }
+
+    // 品牌列表
+    function renderVehicleBrands() {
+        const view = document.getElementById('vehicleModelView');
+        let html = '<div class="vm-view">';
+        html += '<div class="vm-breadcrumb"><span class="vm-breadcrumb-item">🚌 车辆型号库</span></div>';
+        html += '<div class="vm-grid">';
+        vehicleModels.forEach(brand => {
+            const adminBtns = isAdmin ? '<div class="vm-card-actions"><button class="historic-btn historic-btn-edit" onclick="event.stopPropagation();editVehicleBrand(\'' + brand.id + '\')">✏️</button><button class="historic-btn historic-btn-delete" onclick="event.stopPropagation();deleteVehicleBrand(\'' + brand.id + '\')">🗑️</button></div>' : '';
+            html += '<div class="vm-card" onclick="showBrandModels(\'' + brand.id + '\')">';
+            html += '<div class="vm-card-icon">' + (brand.icon || '🚌') + '</div>';
+            html += '<div class="vm-card-name">' + escapeHtml(brand.name) + '</div>';
+            html += '<div class="vm-card-count">' + brand.models.length + ' 个型号</div>';
+            html += adminBtns + '</div>';
+        });
+        if (isAdmin) {
+            html += '<div class="vm-card" onclick="addVehicleBrand()" style="border:2px dashed #d1d5db;color:#6b7280;"><div class="vm-card-icon">➕</div><div class="vm-card-name">添加品牌</div></div>';
+        }
+        html += '</div></div>';
+        view.innerHTML = html;
+    }
+
+    // 型号列表
+    function showBrandModels(brandId) {
+        vmCurrentBrand = brandId;
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const view = document.getElementById('vehicleModelView');
+        let html = '<div class="vm-view">';
+        html += '<div class="vm-breadcrumb">';
+        html += '<span class="vm-breadcrumb-item" onclick="renderVehicleBrands()">🚌 车辆型号库</span>';
+        html += '<span class="vm-breadcrumb-sep">›</span>';
+        html += '<span>' + escapeHtml(brand.name) + '</span>';
+        html += '</div>';
+        html += '<div class="vm-grid">';
+        brand.models.forEach(model => {
+            const adminBtns = isAdmin ? '<div class="vm-card-actions"><button class="historic-btn historic-btn-edit" onclick="event.stopPropagation();editVehicleModel(\'' + brandId + '\',\'' + model.id + '\')">✏️</button><button class="historic-btn historic-btn-delete" onclick="event.stopPropagation();deleteVehicleModel(\'' + brandId + '\',\'' + model.id + '\')">🗑️</button></div>' : '';
+            html += '<div class="vm-card" onclick="showModelDetail(\'' + brandId + '\',\'' + model.id + '\')">';
+            html += '<div class="vm-card-icon">🚐</div>';
+            html += '<div class="vm-card-name">' + escapeHtml(model.name) + '</div>';
+            html += '<div class="vm-card-count">' + (model.params ? model.params.length : 0) + ' 项参数</div>';
+            html += adminBtns + '</div>';
+        });
+        if (isAdmin) {
+            html += '<div class="vm-card" onclick="addVehicleModel(\'' + brandId + '\')" style="border:2px dashed #d1d5db;color:#6b7280;"><div class="vm-card-icon">➕</div><div class="vm-card-name">添加型号</div></div>';
+        }
+        html += '</div></div>';
+        view.innerHTML = html;
+    }
+
+    // 型号详情
+    function showModelDetail(brandId, modelId) {
+        vmCurrentBrand = brandId;
+        vmCurrentModel = modelId;
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model) return;
+        const view = document.getElementById('vehicleModelView');
+        let html = '<div class="vm-view">';
+        html += '<div class="vm-breadcrumb">';
+        html += '<span class="vm-breadcrumb-item" onclick="renderVehicleBrands()">🚌 车辆型号库</span>';
+        html += '<span class="vm-breadcrumb-sep">›</span>';
+        html += '<span class="vm-breadcrumb-item" onclick="showBrandModels(\'' + brandId + '\')">' + escapeHtml(brand.name) + '</span>';
+        html += '<span class="vm-breadcrumb-sep">›</span>';
+        html += '<span>' + escapeHtml(model.name) + '</span>';
+        html += '</div>';
+        html += '<div class="vm-detail">';
+        html += '<div class="vm-detail-title">🚐 ' + escapeHtml(model.name) + ' 参数配置</div>';
+        if (model.params && model.params.length > 0) {
+            html += '<table class="vm-params-table"><thead><tr>';
+            html += isAdmin ? '<th>参数名</th><th>参数值</th><th>操作</th>' : '<th>参数名</th><th>参数值</th>';
+            html += '</tr></thead><tbody>';
+            model.params.forEach((p, idx) => {
+                const adminBtns = isAdmin ? '<td><div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="editModelParam(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteModelParam(\'' + brandId + '\',\'' + modelId + '\',' + idx + ')">🗑️</button></div></td>' : '';
+                html += '<tr><td class="col-key">' + escapeHtml(p.k) + '</td><td class="col-val">' + escapeHtml(p.v) + '</td>' + adminBtns + '</tr>';
+            });
+            html += '</tbody></table>';
+        } else {
+            html += '<p style="color:#9ca3af;text-align:center;padding:20px;">暂无参数配置</p>';
+        }
+        if (isAdmin) {
+            html += '<div class="vm-add-btn"><button class="admin-btn admin-btn-success" onclick="addModelParam(\'' + brandId + '\',\'' + modelId + '\')">➕ 添加参数</button></div>';
+        }
+        html += '</div></div>';
+        view.innerHTML = html;
+    }
+
+    // === 管理员功能：品牌 ===
+    function addVehicleBrand() {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const name = prompt('请输入品牌名称：', '如：宇通客车');
+        if (!name || !name.trim()) return;
+        const icon = prompt('请输入品牌图标（emoji）：', '🚌');
+        const id = 'brand_' + Date.now();
+        vehicleModels.push({ id, name: name.trim(), icon: icon || '🚌', models: [] });
+        saveVehicleModels();
+        renderVehicleBrands();
+        alert('✅ 品牌添加成功！');
+    }
+
+    function editVehicleBrand(brandId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const name = prompt('请输入品牌名称：', brand.name);
+        if (!name || !name.trim()) return;
+        const icon = prompt('请输入品牌图标（emoji）：', brand.icon || '🚌');
+        brand.name = name.trim();
+        brand.icon = icon || brand.icon || '🚌';
+        saveVehicleModels();
+        renderVehicleBrands();
+        alert('✅ 品牌修改成功！');
+    }
+
+    function deleteVehicleBrand(brandId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        if (!confirm('确认删除品牌「' + brand.name + '」及其所有型号吗？')) return;
+        vehicleModels = vehicleModels.filter(b => b.id !== brandId);
+        saveVehicleModels();
+        renderVehicleBrands();
+        alert('✅ 品牌已删除！');
+    }
+
+    // === 管理员功能：型号 ===
+    function addVehicleModel(brandId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const name = prompt('请输入型号名称：', '如：SWB6108EV05G');
+        if (!name || !name.trim()) return;
+        const id = 'model_' + Date.now();
+        brand.models.push({ id, name: name.trim(), params: [] });
+        saveVehicleModels();
+        showBrandModels(brandId);
+        alert('✅ 型号添加成功！');
+    }
+
+    function editVehicleModel(brandId, modelId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model) return;
+        const name = prompt('请输入型号名称：', model.name);
+        if (!name || !name.trim()) return;
+        model.name = name.trim();
+        saveVehicleModels();
+        showBrandModels(brandId);
+        alert('✅ 型号修改成功！');
+    }
+
+    function deleteVehicleModel(brandId, modelId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model) return;
+        if (!confirm('确认删除型号「' + model.name + '」吗？')) return;
+        brand.models = brand.models.filter(m => m.id !== modelId);
+        saveVehicleModels();
+        showBrandModels(brandId);
+        alert('✅ 型号已删除！');
+    }
+
+    // === 管理员功能：参数 ===
+    function addModelParam(brandId, modelId) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model) return;
+        const k = prompt('请输入参数名：', '如：车长');
+        if (!k || !k.trim()) return;
+        const v = prompt('请输入参数值：', '如：10.5m');
+        if (v === null) return;
+        if (!model.params) model.params = [];
+        model.params.push({ k: k.trim(), v: v.trim() });
+        saveVehicleModels();
+        showModelDetail(brandId, modelId);
+        alert('✅ 参数添加成功！');
+    }
+
+    function editModelParam(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.params || !model.params[idx]) return;
+        const p = model.params[idx];
+        const k = prompt('请输入参数名：', p.k);
+        if (!k || !k.trim()) return;
+        const v = prompt('请输入参数值：', p.v);
+        if (v === null) return;
+        model.params[idx] = { k: k.trim(), v: v.trim() };
+        saveVehicleModels();
+        showModelDetail(brandId, modelId);
+        alert('✅ 参数修改成功！');
+    }
+
+    function deleteModelParam(brandId, modelId, idx) {
+        if (!isAdmin) { alert('仅管理员/房主可操作！'); return; }
+        const brand = vehicleModels.find(b => b.id === brandId);
+        if (!brand) return;
+        const model = brand.models.find(m => m.id === modelId);
+        if (!model || !model.params || !model.params[idx]) return;
+        const p = model.params[idx];
+        if (!confirm('确认删除参数「' + p.k + '：' + p.v + '」吗？')) return;
+        model.params.splice(idx, 1);
+        saveVehicleModels();
+        showModelDetail(brandId, modelId);
+        alert('✅ 参数已删除！');
+    }
+
+    </script>
 
 <!-- 线路历史编辑弹窗（带OCR图片识别） -->
 <div id="historyEditModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10001; justify-content:center; align-items:center;">
