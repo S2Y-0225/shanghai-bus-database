@@ -343,23 +343,14 @@
                 </div>
             </div>
 
-            <!-- 📝 线路历史板块（时间+内容，左右排版） -->
+            <!-- 📝 线路历史板块（表格形式，时间+内容左右排版） -->
             <div class="section-title" style="margin-top: 20px;">📝 线路历史</div>
-            <div class="info-grid" id="routeHistoryContainer" style="margin-bottom: 20px;">
-                <div class="info-box">
-                    <div class="info-label">📅 历史时间</div>
-                    <div class="info-value-wrapper">
-                        <span class="info-value" id="historyTime">暂无</span>
-                        <button class="edit-icon-btn" id="editHistoryTimeBtn" onclick="editLineHistoryField('time')" style="display:none;">✏️</button>
-                    </div>
-                </div>
-                <div class="info-box">
-                    <div class="info-label">📋 历史内容</div>
-                    <div class="info-value-wrapper">
-                        <span class="info-value" id="historyContent" style="white-space: pre-wrap;">暂无</span>
-                        <button class="edit-icon-btn" id="editHistoryContentBtn" onclick="editLineHistoryField('content')" style="display:none;">✏️</button>
-                    </div>
-                </div>
+            <table class="fleet-table" id="historyTable">
+                <thead><tr><th>时间</th><th>内容</th></tr></thead>
+                <tbody id="historyEntriesBody"></tbody>
+            </table>
+            <div id="historyAddBtnContainer" style="margin-top: 10px; display: none;">
+                <button class="admin-btn admin-btn-success" onclick="addHistoryEntry()">➕ 添加历史记录</button>
             </div>
 
             <p id="modalDesc" style="font-size:1.05rem; color:#4b5563; margin-bottom:20px;"></p>
@@ -5510,11 +5501,8 @@
         renderPhotoWall(line);
         renderYearlyPhotoWall(line);
         renderPendingPhotos(line);
-        // 线路历史（时间+内容）
-        const historyTimeEl = document.getElementById('historyTime');
-        if (historyTimeEl) historyTimeEl.innerText = line.historyTime || '暂无';
-        const historyContentEl = document.getElementById('historyContent');
-        if (historyContentEl) historyContentEl.innerText = line.historyContent || '暂无';
+        // 线路历史（表格形式）
+        renderHistoryEntries(line);
         updateAdminUI();
 
         document.getElementById('modalOverlay').style.display = 'flex';
@@ -7141,25 +7129,106 @@
         alert(`${label}修改成功！`);
     }
 
-    // 修改线路历史（仅管理员，分时间和内容两个字段）
-    function editLineHistoryField(field) {
+    // 渲染线路历史表格
+    function renderHistoryEntries(line) {
+        const body = document.getElementById('historyEntriesBody');
+        if (!body) return;
+        body.innerHTML = '';
+        const entries = line.historyEntries || [];
+        if (entries.length === 0) {
+            body.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#9ca3af;">暂无线路历史记录</td></tr>';
+        } else {
+            entries.forEach((h, idx) => {
+                const adminBtns = isAdmin ? '<td><div class="historic-action-btns"><button class="historic-btn historic-btn-edit" onclick="editHistoryEntry(' + idx + ')">✏️</button><button class="historic-btn historic-btn-delete" onclick="deleteHistoryEntry(' + idx + ')">🗑️</button></div></td>' : '';
+                body.innerHTML += '<tr><td>' + escapeHtml(h.time) + '</td><td style="white-space:pre-wrap;">' + escapeHtml(h.content) + '</td>' + adminBtns + '</tr>';
+            });
+        }
+        // 更新表头（管理员显示操作列）
+        const table = body.closest('table');
+        if (table) {
+            const thead = table.querySelector('thead tr');
+            if (thead) {
+                thead.innerHTML = isAdmin ?
+                    '<tr><th>时间</th><th>内容</th><th>操作</th></tr>' :
+                    '<tr><th>时间</th><th>内容</th></tr>';
+            }
+        }
+    }
+
+    // 添加历史记录（仅管理员）
+    function addHistoryEntry() {
         if (!isAdmin) {
-            alert('仅管理员/房主可修改线路历史，请先登录！');
+            alert('仅管理员/房主可操作，请先登录！');
             return;
         }
         const line = lines.find(l => l.id === currentLineId);
         if (!line) return;
-        const labels = { time: '历史时间', content: '历史内容' };
-        const label = labels[field] || '线路历史';
-        const dataKey = 'history' + field.charAt(0).toUpperCase() + field.slice(1);
-        const currentValue = line[dataKey] || '';
-        const newValue = prompt('请输入' + label + '：', currentValue);
-        if (newValue === null) return;
-        line[dataKey] = newValue;
-        const el = document.getElementById('history' + field.charAt(0).toUpperCase() + field.slice(1));
-        if (el) el.innerText = newValue || '暂无';
+        if (!line.historyEntries) line.historyEntries = [];
+        const time = prompt('请输入时间：', '如：2020年');
+        if (time === null) return;
+        if (!time.trim()) {
+            alert('时间不能为空！');
+            return;
+        }
+        const content = prompt('请输入内容：', '如：线路调整为XX路');
+        if (content === null) return;
+        if (!content.trim()) {
+            alert('内容不能为空！');
+            return;
+        }
+        line.historyEntries.push({ time: time.trim(), content: content.trim() });
         saveData();
-        alert(label + '修改成功！');
+        renderHistoryEntries(line);
+        alert('✅ 历史记录添加成功！');
+    }
+
+    // 编辑历史记录（仅管理员）
+    function editHistoryEntry(idx) {
+        if (!isAdmin) {
+            alert('仅管理员/房主可操作，请先登录！');
+            return;
+        }
+        const line = lines.find(l => l.id === currentLineId);
+        if (!line || !line.historyEntries || !line.historyEntries[idx]) {
+            alert('未找到该历史记录！');
+            return;
+        }
+        const entry = line.historyEntries[idx];
+        const time = prompt('请输入时间：', entry.time);
+        if (time === null) return;
+        if (!time.trim()) {
+            alert('时间不能为空！');
+            return;
+        }
+        const content = prompt('请输入内容：', entry.content);
+        if (content === null) return;
+        if (!content.trim()) {
+            alert('内容不能为空！');
+            return;
+        }
+        line.historyEntries[idx] = { time: time.trim(), content: content.trim() };
+        saveData();
+        renderHistoryEntries(line);
+        alert('✅ 历史记录已更新！');
+    }
+
+    // 删除历史记录（仅管理员）
+    function deleteHistoryEntry(idx) {
+        if (!isAdmin) {
+            alert('仅管理员/房主可操作，请先登录！');
+            return;
+        }
+        const line = lines.find(l => l.id === currentLineId);
+        if (!line || !line.historyEntries || !line.historyEntries[idx]) {
+            alert('未找到该历史记录！');
+            return;
+        }
+        const entry = line.historyEntries[idx];
+        if (!confirm('确认删除历史记录「' + entry.time + '：' + entry.content + '」吗？')) return;
+        line.historyEntries.splice(idx, 1);
+        saveData();
+        renderHistoryEntries(line);
+        alert('✅ 历史记录已删除！');
     }
 
     // 更新管理员UI状态
@@ -7184,10 +7253,8 @@
             if (fleetAddBtn) fleetAddBtn.style.display = 'block';
             const categoryEdit = document.getElementById('categoryEditSection');
             if (categoryEdit) categoryEdit.style.display = 'flex';
-            const editHistoryTimeBtn = document.getElementById('editHistoryTimeBtn');
-            if (editHistoryTimeBtn) editHistoryTimeBtn.style.display = 'inline-block';
-            const editHistoryContentBtn = document.getElementById('editHistoryContentBtn');
-            if (editHistoryContentBtn) editHistoryContentBtn.style.display = 'inline-block';
+            const historyAddBtn = document.getElementById('historyAddBtnContainer');
+            if (historyAddBtn) historyAddBtn.style.display = 'block';
         } else {
             if (loginBar) loginBar.style.display = 'flex';
             if (adminSection) adminSection.style.display = 'none';
@@ -7203,10 +7270,8 @@
             if (fleetAddBtnH) fleetAddBtnH.style.display = 'none';
             const categoryEditH = document.getElementById('categoryEditSection');
             if (categoryEditH) categoryEditH.style.display = 'none';
-            const editHistoryTimeBtnH = document.getElementById('editHistoryTimeBtn');
-            if (editHistoryTimeBtnH) editHistoryTimeBtnH.style.display = 'none';
-            const editHistoryContentBtnH = document.getElementById('editHistoryContentBtn');
-            if (editHistoryContentBtnH) editHistoryContentBtnH.style.display = 'none';
+            const historyAddBtnH = document.getElementById('historyAddBtnContainer');
+            if (historyAddBtnH) historyAddBtnH.style.display = 'none';
         }
         
         if (currentLineId) {
@@ -7217,6 +7282,7 @@
                 renderPhotoWall(line);
                 renderPendingPhotos(line);
                 renderCurrentFleet(line); // 重新渲染现役配车车型（显示/隐藏编辑按钮）
+                renderHistoryEntries(line); // 重新渲染线路历史表格（显示/隐藏操作列）
                 // 重新渲染配车变迁图鉴表格（显示/隐藏操作列）
                 const fleetBody = document.getElementById('modalFleet');
                 if (fleetBody && line.fleet) {
