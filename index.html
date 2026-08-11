@@ -343,6 +343,25 @@
                 </div>
             </div>
 
+            <!-- 📝 线路历史板块（时间+内容，左右排版） -->
+            <div class="section-title" style="margin-top: 20px;">📝 线路历史</div>
+            <div class="info-grid" id="routeHistoryContainer" style="margin-bottom: 20px;">
+                <div class="info-box">
+                    <div class="info-label">📅 历史时间</div>
+                    <div class="info-value-wrapper">
+                        <span class="info-value" id="historyTime">暂无</span>
+                        <button class="edit-icon-btn" id="editHistoryTimeBtn" onclick="editLineHistoryField('time')" style="display:none;">✏️</button>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">📋 历史内容</div>
+                    <div class="info-value-wrapper">
+                        <span class="info-value" id="historyContent" style="white-space: pre-wrap;">暂无</span>
+                        <button class="edit-icon-btn" id="editHistoryContentBtn" onclick="editLineHistoryField('content')" style="display:none;">✏️</button>
+                    </div>
+                </div>
+            </div>
+
             <p id="modalDesc" style="font-size:1.05rem; color:#4b5563; margin-bottom:20px;"></p>
 
             <div class="info-grid">
@@ -433,13 +452,6 @@
                 <thead><tr><th>历史自编号</th><th>车型</th><th>备注</th><th class="admin-only-col" style="display:none;">操作</th></tr></thead>
                 <tbody id="historicCodes"></tbody>
             </table>
-
-            <!-- 📝 线路历史板块 -->
-            <div class="section-title">📝 线路历史</div>
-            <div id="routeHistoryContainer" style="margin-bottom: 20px;">
-                <div id="routeHistoryContent" style="white-space: pre-wrap; font-size: 0.95rem; color: #374151; line-height: 1.8; background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #fbbf24;"></div>
-                <button class="admin-btn" id="editHistoryBtn" onclick="editLineHistory()" style="display:none; margin-top: 10px;">✏️ 修改线路历史</button>
-            </div>
 
             <!-- 📅 每年线路照片集（按年份分组） -->
             <div class="section-title">📅 年代照片集</div>
@@ -5498,11 +5510,11 @@
         renderPhotoWall(line);
         renderYearlyPhotoWall(line);
         renderPendingPhotos(line);
-        // 线路历史
-        const historyEl = document.getElementById('routeHistoryContent');
-        if (historyEl) {
-            historyEl.innerText = line.history || '暂无线路历史记录';
-        }
+        // 线路历史（时间+内容）
+        const historyTimeEl = document.getElementById('historyTime');
+        if (historyTimeEl) historyTimeEl.innerText = line.historyTime || '暂无';
+        const historyContentEl = document.getElementById('historyContent');
+        if (historyContentEl) historyContentEl.innerText = line.historyContent || '暂无';
         updateAdminUI();
 
         document.getElementById('modalOverlay').style.display = 'flex';
@@ -7129,24 +7141,25 @@
         alert(`${label}修改成功！`);
     }
 
-    // 修改线路历史（仅管理员）
-    function editLineHistory() {
+    // 修改线路历史（仅管理员，分时间和内容两个字段）
+    function editLineHistoryField(field) {
         if (!isAdmin) {
             alert('仅管理员/房主可修改线路历史，请先登录！');
             return;
         }
         const line = lines.find(l => l.id === currentLineId);
         if (!line) return;
-        const currentValue = line.history || '';
-        const newValue = prompt('请输入线路历史（支持多行文本）：', currentValue);
+        const labels = { time: '历史时间', content: '历史内容' };
+        const label = labels[field] || '线路历史';
+        const dataKey = 'history' + field.charAt(0).toUpperCase() + field.slice(1);
+        const currentValue = line[dataKey] || '';
+        const newValue = prompt('请输入' + label + '：', currentValue);
         if (newValue === null) return;
-        line.history = newValue;
-        const historyEl2 = document.getElementById('routeHistoryContent');
-        if (historyEl2) {
-            historyEl2.innerText = newValue || '暂无线路历史记录';
-        }
+        line[dataKey] = newValue;
+        const el = document.getElementById('history' + field.charAt(0).toUpperCase() + field.slice(1));
+        if (el) el.innerText = newValue || '暂无';
         saveData();
-        alert('线路历史修改成功！');
+        alert(label + '修改成功！');
     }
 
     // 更新管理员UI状态
@@ -7171,8 +7184,10 @@
             if (fleetAddBtn) fleetAddBtn.style.display = 'block';
             const categoryEdit = document.getElementById('categoryEditSection');
             if (categoryEdit) categoryEdit.style.display = 'flex';
-            const editHistoryBtn = document.getElementById('editHistoryBtn');
-            if (editHistoryBtn) editHistoryBtn.style.display = 'inline-block';
+            const editHistoryTimeBtn = document.getElementById('editHistoryTimeBtn');
+            if (editHistoryTimeBtn) editHistoryTimeBtn.style.display = 'inline-block';
+            const editHistoryContentBtn = document.getElementById('editHistoryContentBtn');
+            if (editHistoryContentBtn) editHistoryContentBtn.style.display = 'inline-block';
         } else {
             if (loginBar) loginBar.style.display = 'flex';
             if (adminSection) adminSection.style.display = 'none';
@@ -7188,8 +7203,10 @@
             if (fleetAddBtnH) fleetAddBtnH.style.display = 'none';
             const categoryEditH = document.getElementById('categoryEditSection');
             if (categoryEditH) categoryEditH.style.display = 'none';
-            const editHistoryBtnH = document.getElementById('editHistoryBtn');
-            if (editHistoryBtnH) editHistoryBtnH.style.display = 'none';
+            const editHistoryTimeBtnH = document.getElementById('editHistoryTimeBtn');
+            if (editHistoryTimeBtnH) editHistoryTimeBtnH.style.display = 'none';
+            const editHistoryContentBtnH = document.getElementById('editHistoryContentBtn');
+            if (editHistoryContentBtnH) editHistoryContentBtnH.style.display = 'none';
         }
         
         if (currentLineId) {
