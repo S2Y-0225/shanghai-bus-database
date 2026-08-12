@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -5333,7 +5333,7 @@
         overlay.innerHTML = `
             <div style="background:white;border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:70vh;overflow-y:auto;">
                 <h3 style="margin:0 0 16px 0;">📁 移动线路到文件夹</h3>
-                <p style="color:#6b7280;margin:0 0 12px 0;">线路：${line.name}</p>
+                <p style="color:#6b7280;margin:0 0 12px 0;">线路：${escapeHtml(line.name)}</p>
                 <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;max-height:300px;overflow-y:auto;">
                     ${folderTreeHtml}
                     <div class="move-line-folder-tree-item" style="margin-left:0;border-top:1px solid #e5e7eb;margin-top:8px;padding-top:8px;color:#ef4444;" onclick="removeLineFromNestedFolder('${lineId}'); closeMoveLineDialog();">
@@ -6018,7 +6018,7 @@
         const approvedPhotos = line.photos ? line.photos.filter(p => p.status === 'approved') : [];
         const coverImg = line.userImg || (approvedPhotos.length > 0 ? approvedPhotos[0].url : null);
 
-        const imgHtml = coverImg ? `<img src="${coverImg}" alt="${line.name}">` : `[ ${line.img} ]`;
+        const imgHtml = coverImg ? `<img src="${coverImg}" alt="${escapeHtml(line.name)}">` : `[ ${escapeHtml(line.img)} ]`;
 
         const card = document.createElement('div');
         card.className = 'card';
@@ -6030,10 +6030,10 @@
         card.innerHTML = `
             <div class="card-img">${imgHtml}<span class="status-badge ${statusClass}">${statusText}</span></div>
             <div class="card-body">
-                <div class="card-title">${line.name}</div>
-                <div class="card-desc">${line.desc}</div>
-                <div class="card-meta">${line.meta}</div>
-                <div class="card-company">🏢 ${companyInfo}${fleetInfo ? ' ｜ 🚐 ' + fleetInfo : ''}</div>
+                <div class="card-title">${escapeHtml(line.name)}</div>
+                <div class="card-desc">${escapeHtml(line.desc)}</div>
+                <div class="card-meta">${escapeHtml(line.meta)}</div>
+                <div class="card-company">🏢 ${escapeHtml(companyInfo)}${fleetInfo ? ' ｜ 🚐 ' + escapeHtml(fleetInfo) : ''}</div>
             </div>
         `;
         targetGrid.appendChild(card);
@@ -7286,8 +7286,8 @@
             const list = groups[year];
             const photoItems = list.map((p, idx) => `
                 <div class="yearly-photo-item" onclick="openImageViewer('${p.url}')">
-                    <img src="${p.url}" alt="${p.desc || year + '年照片'}">
-                    ${p.desc ? `<div class="yearly-photo-desc">${p.desc}</div>` : ''}
+                    <img src="${p.url}" alt="${escapeHtml(p.desc || year + '年照片')}">
+                    ${p.desc ? `<div class="yearly-photo-desc">${escapeHtml(p.desc)}</div>` : ''}
                 </div>
             `).join('');
             return `
