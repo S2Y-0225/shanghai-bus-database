@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -1159,7 +1159,7 @@
         ]}
     ];
     const DELETED_NESTED_FOLDERS_KEY = 'bus_archive_deleted_nested_folders';
-    const CURRENT_VERSION = 92;
+    const CURRENT_VERSION = 93;
 
     // v76: 强制移除之前版本错误添加到巴士一公司的线路（这些线路不属于巴士一公司）
     // v77: 更新巴士五公司车队归属（四车队/九车队/十二车队/其他）+ 添加一车队/二车队新线路
@@ -1221,7 +1221,7 @@
         { id: "28", name: "28路", status: "active", tags: [], desc: "常规公交线路，连接提篮桥与福州路。", meta: "1960年代开通 | 现役新能源客车", img: "28路公交", route: "东大名路海门路 - 东大名路 - 杨树浦路 - 海门路 - 长阳路 - 大连路 - 周家嘴路 - 海宁路 - 河南中路 - 福州路河南中路", time: "双向 05:00 - 23:00", company: "巴士一公司二车队", fare: "单一票价 2元", fleet: [{era:"1960年代", code:"无轨电车", feature:"开线初期"}, {era:"现役", code:"SWB6128EV56", feature:"申沃纯电客车"}], vehicleCodes: ["28-001"], photos: [] },
         { id: "33", name: "33路", status: "active", tags: [], desc: "常规公交线路，连接周家嘴路与中山北路。", meta: "1960年代开通 | 现役新能源客车", img: "33路公交", route: "周家嘴路军工路 - 军工路 - 控江路 - 大连路 - 四平路 - 中山北路四平路", time: "双向 05:00 - 23:00", company: "巴士一公司二车队", fare: "单一票价 2元", fleet: [{era:"1960年代", code:"无轨电车", feature:"开线初期"}, {era:"现役", code:"SWB6128EV56", feature:"申沃纯电客车"}], vehicleCodes: ["33-001"], photos: [] },
         { id: "37", name: "37路", status: "active", tags: [], desc: "常规公交线路，连接美丽园与扬州路。", meta: "1950年代开通 | 现役新能源客车", img: "37路公交", route: "南京西路永嘉路 - 南京西路 - 南京东路 - 中山东一路 - 杨树浦路 - 扬州路内江路", time: "双向 05:00 - 23:00", company: "巴士一公司九车队", fare: "单一票价 2元", fleet: [{era:"1950年代", code:"无轨电车", feature:"开线初期"}, {era:"现役", code:"SWB6128EV56", feature:"申沃纯电客车"}], vehicleCodes: ["37-001"], photos: [] },
-        { id: "47", name: "47路", status: "active", tags: [], desc: "连接惠民路与钟山路的常规公交线路。", meta: "1960年代开通 | 常规公交", img: "47路公交", route: "惠民路长阳路 - 长阳路 - 大连路 - 控江路 - 营口路 - 钟山路营口路", time: "双向 05:30 - 22:30", company: "巴士一公司一车队", fare: "单一票价 2元", fleet: [{era:"现役", code:"SWB6128EV56", feature:"申沃纯电"}], vehicleCodes: ["47-001"], photos: [] },
+        { id: "47", name: "47路", status: "active", tags: [], desc: "连接惠民路与骊山路的常规公交线路。", meta: "1960年代开通 | 常规公交", img: "47路公交", route: "惠民路长阳路 - 长阳路 - 大连路 - 控江路 - 营口路 - 骊山路华阴路", time: "双向 05:30 - 22:30", company: "巴士一公司一车队", fare: "单一票价 2元", fleet: [{era:"现役", code:"SWB6128EV56", feature:"申沃纯电"}], vehicleCodes: ["47-001"], photos: [] },
         { id: "60", name: "60路", status: "active", tags: [], desc: "连接定边路与江西中路的常规公交。", meta: "1990年代开通 | 常规公交", img: "60路公交", route: "定边路祁连山南路 - 祁连山南路 - 金沙江路 - 中山北路 - 共和新路 - 天目中路 - 河南北路 - 江西中路河南北路", time: "双向 05:00 - 23:00", company: "巴士一公司四车队", fare: "单一票价 2元", fleet: [{era:"现役", code:"SWB6128EV56", feature:"申沃纯电"}], vehicleCodes: ["60-001"], photos: [] },
         { id: "61", name: "61路", status: "active", tags: [], desc: "连接吴淞路与众兴路的常规公交。", meta: "1950年代开通 | 常规公交", img: "61路公交", route: "吴淞路海宁路 - 四平路 - 翔殷路 - 营口路 - 众兴路营口路", time: "双向 05:00 - 22:30", company: "巴士一公司一车队", fare: "单一票价 2元", fleet: [{era:"现役", code:"SWB6128EV56", feature:"申沃纯电"}], vehicleCodes: ["61-001"], photos: [] },
         { id: "66", name: "66路", status: "active", tags: [], desc: "丰镇路至南浦大桥，305路为其夜宵线。", meta: "1950年代开通 | 常规公交", img: "66路公交", route: "丰镇路江杨南路 - 江杨南路 - 共和新路 - 中兴路 - 宝山路 - 河南北路 - 河南中路 - 中山南一路 - 中山南路南浦大桥", time: "双向 05:00 - 23:00", company: "巴士一公司一车队", fare: "单一票价 2元", fleet: [{era:"现役", code:"SWB6128EV56", feature:"申沃纯电"}], vehicleCodes: ["66-001"], photos: [] },
@@ -4257,6 +4257,15 @@
                             console.log(`   ➕ 新增线路: ${defaultLine.name}`);
                         }
                     });
+                    // v93: 更新47路终点站（仅当用户未自行修改过时才更新，保护已有修改）
+                    if (savedVersion < 93) {
+                        const line47 = parsed.find(l => l.id === '47');
+                        if (line47 && line47.route === '惠民路长阳路 - 长阳路 - 大连路 - 控江路 - 营口路 - 钟山路营口路') {
+                            line47.route = '惠民路长阳路 - 长阳路 - 大连路 - 控江路 - 营口路 - 骊山路华阴路';
+                            line47.desc = '连接惠民路与骊山路的常规公交线路。';
+                            console.log('   🔄 更新47路终点站：钟山路营口路 → 骊山路华阴路');
+                        }
+                    }
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
                     localStorage.setItem(VERSION_KEY, CURRENT_VERSION.toString());
                     console.log(`✅ 升级完成：合并 ${newCount} 条新线路，跳过 ${skippedCount} 条已删除线路，当前共 ${parsed.length} 条线路`);
