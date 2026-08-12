@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7220,18 +7220,17 @@
         const container = document.getElementById('currentFleetGrid');
         if (!container) return;
         const fleet = line.fleet || [];
-        // 筛选现役车型（era 包含"现役"或不含历史年份）
-        const currentModels = fleet.filter(f => {
+        // 筛选现役车型：只有era明确标记为"现役"或"当前"，或era为空的才显示
+        // 配车变迁图鉴中创建的历史车型（era为年份、年份范围、历史描述等）不显示在现役配车车型中
+        const isCurrentFleet = (f) => {
             const era = (f.era || '').toString();
-            return era.includes('现役') || era.includes('当前') || era === '' ||
-                   /^(20[0-2]\d|202\d)年?$/.test(era) === false && !era.includes('19') && !era.includes('退役') && !era.includes('历史');
-        });
+            return era.includes('现役') || era.includes('当前') || era === '';
+        };
+        const currentModels = fleet.filter(isCurrentFleet);
         // 记录现役车型在 fleet 中的索引
         const currentIndices = [];
         fleet.forEach((f, idx) => {
-            const era = (f.era || '').toString();
-            if (era.includes('现役') || era.includes('当前') || era === '' ||
-                /^(20[0-2]\d|202\d)年?$/.test(era) === false && !era.includes('19') && !era.includes('退役') && !era.includes('历史')) {
+            if (isCurrentFleet(f)) {
                 currentIndices.push(idx);
             }
         });
@@ -7429,7 +7428,12 @@
         const feature = prompt('请输入车型特点：', '如：经典柴油车');
 
         line.fleet.push({ era: era.trim(), code: code.trim(), feature: (feature || '').trim() });
-        saveData();
+        if (!saveData()) {
+            // 保存失败，移除刚添加的条目防止数据不一致
+            line.fleet.pop();
+            alert('❌ 保存失败！可能是浏览器存储空间不足。\n请导出数据备份后清理浏览器缓存重试。');
+            return;
+        }
         renderCurrentFleet(line);
         // 重新渲染 fleet 表格
         const fleetBody = document.getElementById('modalFleet');
@@ -7462,7 +7466,12 @@
         const feature = prompt('请输入车型特点：', '如：申沃纯电');
 
         line.fleet.push({ era: '现役', code: code.trim(), feature: (feature || '').trim() });
-        saveData();
+        if (!saveData()) {
+            // 保存失败，移除刚添加的条目防止数据不一致
+            line.fleet.pop();
+            alert('❌ 保存失败！可能是浏览器存储空间不足。\n请导出数据备份后清理浏览器缓存重试。');
+            return;
+        }
         renderCurrentFleet(line);
         // 重新渲染 fleet 表格
         const fleetBody = document.getElementById('modalFleet');
@@ -7498,8 +7507,14 @@
         }
         const feature = prompt('请输入车型特点：', entry.feature);
 
+        const oldEntry = line.fleet[idx];
         line.fleet[idx] = { era: era.trim(), code: code.trim(), feature: (feature || '').trim() };
-        saveData();
+        if (!saveData()) {
+            // 保存失败，回滚修改
+            line.fleet[idx] = oldEntry;
+            alert('❌ 保存失败！可能是浏览器存储空间不足。\n请导出数据备份后清理浏览器缓存重试。');
+            return;
+        }
         renderCurrentFleet(line);
         // 重新渲染 fleet 表格
         const fleetBody = document.getElementById('modalFleet');
@@ -7527,8 +7542,14 @@
         const entry = line.fleet[idx];
         if (!confirm('确认删除配车「' + entry.code + '」吗？')) return;
 
+        const deletedEntry = line.fleet[idx];
         line.fleet.splice(idx, 1);
-        saveData();
+        if (!saveData()) {
+            // 保存失败，恢复被删除的条目
+            line.fleet.splice(idx, 0, deletedEntry);
+            alert('❌ 保存失败！可能是浏览器存储空间不足。\n请导出数据备份后清理浏览器缓存重试。');
+            return;
+        }
         renderCurrentFleet(line);
         // 重新渲染 fleet 表格
         const fleetBody = document.getElementById('modalFleet');
