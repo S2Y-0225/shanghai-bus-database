@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7707,23 +7707,30 @@
             return;
         }
         
+        const oldRoute = line.route;
         const parts = line.route.split(' - ');
         if (type === 'start') {
             parts[0] = trimmed;
         } else {
             parts[parts.length - 1] = trimmed;
         }
-        
+
         line.route = parts.join(' - ');
-        
+
+        if (!saveData()) {
+            // 保存失败，回滚修改防止刷新后丢失
+            line.route = oldRoute;
+            alert('❌ 保存失败！可能是浏览器存储空间不足。\n请导出数据备份后清理浏览器缓存重试。');
+            return;
+        }
+
         document.getElementById('modalRoute').innerText = line.route;
         if (type === 'start') {
             document.getElementById('terminalStartName').innerText = trimmed;
         } else {
             document.getElementById('terminalEndName').innerText = trimmed;
         }
-        saveData();
-        
+
         alert(`${label}修改成功！\n原值：${currentValue}\n新值：${trimmed}`);
     }
 
@@ -7758,8 +7765,16 @@
             return;
         }
         
+        const oldValue = line[field];
         line[field] = trimmed;
-        
+
+        if (!saveData()) {
+            // 保存失败，回滚修改防止刷新后丢失
+            line[field] = oldValue;
+            alert('❌ 保存失败！可能是浏览器存储空间不足。\n请导出数据备份后清理浏览器缓存重试。');
+            return;
+        }
+
         if (field === 'route') {
             document.getElementById('modalRoute').innerText = line.route;
             const terminals = extractTerminals(line.route);
@@ -7779,8 +7794,7 @@
         } else if (field === 'desc') {
             document.getElementById('modalDesc').innerText = line.desc;
         }
-        
-        saveData();
+
         alert(`${label}修改成功！`);
     }
 
