@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7720,25 +7720,31 @@
             alert('仅管理员/房主可修改终点站，请先登录！');
             return;
         }
-        
+
         const line = lines.find(l => l.id === currentLineId);
         if (!line) return;
-        
-        const terminals = extractTerminals(line.route);
-        const currentValue = type === 'start' ? terminals.start : terminals.end;
+
+        const oldRoute = line.route;
+        const oldTerminals = extractTerminals(oldRoute);
+        const currentValue = type === 'start' ? oldTerminals.start : oldTerminals.end;
+        const otherValue = type === 'start' ? oldTerminals.end : oldTerminals.start;
         const label = type === 'start' ? '起点站' : '终点站';
-        
+        const otherLabel = type === 'start' ? '终点站' : '起点站';
+
         const newValue = prompt(`请输入新的${label}：`, currentValue);
         if (newValue === null) return;
-        
+
         const trimmed = newValue.trim();
         if (!trimmed) {
             alert(`${label}不能为空！`);
             return;
         }
-        
-        const oldRoute = line.route;
-        const parts = line.route.split(' - ');
+
+        const parts = oldRoute.split(' - ');
+        if (parts.length < 2) {
+            alert('线路走向格式异常，无法修改终点站！');
+            return;
+        }
         if (type === 'start') {
             parts[0] = trimmed;
         } else {
@@ -7747,11 +7753,39 @@
 
         line.route = parts.join(' - ');
 
+        // 验证：修改一个终点站时，另一个终点站不能被改变
+        const newTerminals = extractTerminals(line.route);
+        if (type === 'start' && newTerminals.end !== oldTerminals.end) {
+            line.route = oldRoute;
+            alert(`❌ 修改失败！${otherLabel}被意外修改。\n请重试。`);
+            return;
+        }
+        if (type === 'end' && newTerminals.start !== oldTerminals.start) {
+            line.route = oldRoute;
+            alert(`❌ 修改失败！${otherLabel}被意外修改。\n请重试。`);
+            return;
+        }
+
         if (!saveData()) {
-            // 保存失败，回滚修改防止刷新后丢失
             line.route = oldRoute;
             alert('❌ 保存失败！可能是浏览器存储空间不足。\n请导出数据备份后清理浏览器缓存重试。');
             return;
+        }
+
+        // 验证：确认修改已正确写入localStorage
+        try {
+            const savedRaw = localStorage.getItem(STORAGE_KEY);
+            if (savedRaw) {
+                const savedLines = JSON.parse(savedRaw);
+                const savedLine = savedLines.find(l => l.id === currentLineId);
+                if (!savedLine || savedLine.route !== line.route) {
+                    line.route = oldRoute;
+                    alert('❌ 保存验证失败！数据未正确写入。\n请导出数据备份后清理浏览器缓存重试。');
+                    return;
+                }
+            }
+        } catch (verifyErr) {
+            console.error('❌ 保存验证异常:', verifyErr);
         }
 
         document.getElementById('modalRoute').innerText = line.route;
@@ -7761,7 +7795,7 @@
             document.getElementById('terminalEndName').innerText = trimmed;
         }
 
-        alert(`${label}修改成功！\n原值：${currentValue}\n新值：${trimmed}`);
+        alert(`${label}修改成功并已保存！\n原值：${currentValue}\n新值：${trimmed}\n${otherLabel}保持不变：${otherValue}`);
     }
 
     // 修改线路字段（仅管理员）
